@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="VoltPhish" width="300" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-light.png" />
+    <img src="frontend/public/logo.png" alt="VoltPhish" width="300" />
+  </picture>
 
   <h1>VoltPhish</h1>
   <p><strong>The modern, open-source phishing-simulation & human-risk platform.</strong><br/>

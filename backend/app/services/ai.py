@@ -54,58 +54,140 @@ class AiError(RuntimeError):
     pass
 
 
-async def generate_template(scenario: str, difficulty: str = "medium") -> dict:
+# Supported providers and their default API base URLs.
+PROVIDERS: dict[str, dict] = {
+    "anthropic": {"label": "Anthropic (Claude)", "base": "https://api.anthropic.com"},
+    "openai": {"label": "OpenAI (GPT)", "base": "https://api.openai.com"},
+    "google": {"label": "Google (Gemini)", "base": "https://generativelanguage.googleapis.com"},
+}
+
+
+def base_url_for(provider: str) -> str:
+    return PROVIDERS.get(provider, PROVIDERS["anthropic"])["base"]
+
+
+def get_ai_config(db) -> dict:  # noqa: ANN001
+    """Resolve AI config: DB-stored settings (admin UI) override env defaults.
+    Keys are stored per provider, encrypted; returned decrypted for use."""
+    from ..models import Setting
+    from ..security import decrypt_secret
+
     settings = get_settings()
-    if not settings.ai_api_key:
-        raise AiError(
-            "AI generation is not configured. Set PHISHSIM_AI_API_KEY (an "
-            "Anthropic API key) to enable it."
+
+    def _get(key: str, default: str) -> str:
+        row = db.get(Setting, key)
+        return row.value if row is not None and row.value not in (None, "") else default
+
+    provider = _get("ai_provider", "anthropic")
+    if provider not in PROVIDERS:
+        provider = "anthropic"
+    model = _get("ai_model", settings.ai_model)
+
+    enc = db.get(Setting, f"ai_key_{provider}_enc")
+    api_key = decrypt_secret(enc.value) if (enc and enc.value) else ""
+    # Back-compat: the env var seeds the Anthropic key.
+    if provider == "anthropic" and not api_key:
+        api_key = settings.ai_api_key
+    return {"provider": provider, "api_key": api_key or "", "model": model, "base_url": base_url_for(provider)}
+
+
+def _build_request(provider: str, base_url: str, api_key: str, model: str, system: str, user_msg: str):
+    base = base_url.rstrip("/")
+    if provider == "openai":
+        return (
+            f"{base}/v1/chat/completions",
+            {"Authorization": f"Bearer {api_key}", "content-type": "application/json"},
+            {
+                "model": model,
+                "max_tokens": 2000,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user_msg}],
+            },
         )
+    if provider == "google":
+        return (
+            f"{base}/v1beta/models/{model}:generateContent?key={api_key}",
+            {"content-type": "application/json"},
+            {
+                "systemInstruction": {"parts": [{"text": system}]},
+                "contents": [{"parts": [{"text": user_msg}]}],
+                "generationConfig": {"maxOutputTokens": 2000},
+            },
+        )
+    # anthropic (default)
+    return (
+        f"{base}/v1/messages",
+        {"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+        {"model": model, "max_tokens": 2000, "system": system, "messages": [{"role": "user", "content": user_msg}]},
+    )
+
+
+def _parse_response(provider: str, data: dict) -> str:
+    if provider == "openai":
+        return data["choices"][0]["message"]["content"]
+    if provider == "google":
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    return "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+
+
+def _raise_for_status(status_code: int, model: str) -> None:
+    if status_code in (401, 403):
+        raise AiError("The API key was rejected. Check the key under Settings → AI.")
+    if status_code == 404:
+        raise AiError(f"Model '{model}' not found for this provider. Check the model name.")
+    if status_code == 429:
+        raise AiError("The AI service is rate-limited right now. Try again in a moment.")
+    if status_code >= 400:
+        raise AiError(f"The AI service returned an error (HTTP {status_code}).")
+
+
+async def ping(*, provider: str, api_key: str, model: str, base_url: str) -> None:
+    """Tiny request to verify the provider/key/model work. Raises AiError on failure."""
+    url, headers, body = _build_request(provider, base_url, api_key, model, "You are a test.", "Reply with OK")
+    # keep it cheap
+    if provider == "anthropic":
+        body["max_tokens"] = 8
+    elif provider == "openai":
+        body["max_tokens"] = 8
+    elif provider == "google":
+        body["generationConfig"] = {"maxOutputTokens": 8}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=body)
+    except httpx.HTTPError:
+        raise AiError("Couldn't reach the AI service.")
+    _raise_for_status(resp.status_code, model)
+
+
+async def generate_template(
+    scenario: str, difficulty: str = "medium", *, provider: str = "anthropic", api_key: str = "", model: str = "", base_url: str = ""
+) -> dict:
+    settings = get_settings()
+    api_key = api_key or (settings.ai_api_key if provider == "anthropic" else "")
+    model = model or settings.ai_model
+    base_url = base_url or base_url_for(provider)
+    if not api_key:
+        raise AiError("AI generation is not configured. Add an API key under Settings → AI to enable it.")
 
     hint = _DIFFICULTY_HINT.get(difficulty, _DIFFICULTY_HINT["medium"])
     user_msg = (
         f"Write a simulated phishing training email for this scenario:\n\n{scenario}\n\n"
         f"Difficulty: {difficulty}. {hint}"
     )
-
-    payload = {
-        "model": settings.ai_model,
-        "max_tokens": 2000,
-        "system": _SYSTEM,
-        "messages": [{"role": "user", "content": user_msg}],
-    }
-    headers = {
-        "x-api-key": settings.ai_api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
+    url, headers, body = _build_request(provider, base_url, api_key, model, _SYSTEM, user_msg)
 
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(
-                f"{settings.ai_base_url.rstrip('/')}/v1/messages",
-                headers=headers,
-                json=payload,
-            )
+            resp = await client.post(url, headers=headers, json=body)
     except httpx.HTTPError:
         log.exception("AI request failed (network)")
         raise AiError("Could not reach the AI service. Try again shortly.")
 
-    if resp.status_code == 401:
-        raise AiError("The configured AI API key was rejected (401). Check PHISHSIM_AI_API_KEY.")
-    if resp.status_code == 429:
-        raise AiError("The AI service is rate-limited right now. Try again in a moment.")
-    if resp.status_code >= 400:
-        log.warning("AI request non-2xx: %s", resp.status_code)
-        raise AiError("The AI service returned an error. Try a different prompt.")
+    _raise_for_status(resp.status_code, model)
 
     try:
-        data = resp.json()
-        text = "".join(
-            block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-        ).strip()
+        text = _parse_response(provider, resp.json()).strip()
         parsed = _extract_json(text)
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, IndexError):
         log.warning("AI response could not be parsed")
         raise AiError("The AI returned an unexpected format. Try again.")
 

@@ -16,6 +16,7 @@ import ApiKeys from "./pages/ApiKeys";
 import Users from "./pages/Users";
 import Docs from "./pages/Docs";
 import Report from "./pages/Report";
+import Settings from "./pages/Settings";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/docs" element={<Docs />} />
         {user.role === "admin" && <Route path="/webhooks" element={<Webhooks />} />}
         {user.role === "admin" && <Route path="/users" element={<Users />} />}
+        {user.role === "admin" && <Route path="/settings" element={<Settings />} />}
       </Route>
       <Route path="/print-report" element={<Report />} />
       <Route path="*" element={<Navigate to="/" replace />} />

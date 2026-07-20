@@ -19,6 +19,7 @@ import type {
   LandingPage,
   PageSummary,
   Profile,
+  AiSettings,
   RuntimeSettings,
   SmsProfile,
   Template,
@@ -131,6 +132,11 @@ export const api = {
 
   // runtime settings (for dev-mode banner)
   getSettings: () => request<RuntimeSettings>("GET", "/settings"),
+
+  // AI provider config (admin)
+  getAiSettings: () => request<AiSettings>("GET", "/settings/ai"),
+  updateAiSettings: (p: Record<string, unknown>) => request<AiSettings>("PUT", "/settings/ai", p),
+  testAiSettings: () => request<{ detail: string }>("POST", "/settings/ai/test"),
 
   // dashboard aggregate
   getDashboard: () => request<DashboardData>("GET", "/dashboard"),

@@ -9,6 +9,7 @@ from .job import Job, JobStatus
 from .page import LandingPage
 from .profile import SendingProfile
 from .result import Result, ResultStatus
+from .setting import Setting
 from .sms_profile import SmsProfile
 from .template import Template
 from .user import Session, User, UserRole
@@ -36,4 +37,5 @@ __all__ = [
     "ApiKey",
     "Attachment",
     "SmsProfile",
+    "Setting",
 ]

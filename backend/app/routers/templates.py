@@ -26,7 +26,7 @@ from ..schemas.template import (
     TemplateOut,
     TemplateUpdate,
 )
-from ..services.ai import AiError, generate_template
+from ..services.ai import AiError, generate_template, get_ai_config
 from ..services.mimeimport import parse_email
 
 # Guardrails: benign lure document types only — no executables/scripts.
@@ -56,11 +56,15 @@ def import_template(payload: TemplateImportRequest) -> TemplateImportResult:
 
 
 @router.post("/ai-generate", response_model=AiGenerateResult)
-async def ai_generate(payload: AiGenerateRequest) -> AiGenerateResult:
+async def ai_generate(payload: AiGenerateRequest, db: DbSession = Depends(get_db)) -> AiGenerateResult:
     """Draft a simulation email from a scenario using the configured LLM.
     Does not save it — the operator reviews and edits before saving."""
+    cfg = get_ai_config(db)
     try:
-        result = await generate_template(payload.scenario, payload.difficulty)
+        result = await generate_template(
+            payload.scenario, payload.difficulty,
+            provider=cfg["provider"], api_key=cfg["api_key"], model=cfg["model"], base_url=cfg["base_url"],
+        )
     except AiError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     return AiGenerateResult(**result)

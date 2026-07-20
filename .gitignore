@@ -41,3 +41,6 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# TS build cache
+*.tsbuildinfo

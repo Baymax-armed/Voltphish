@@ -79,6 +79,14 @@ function Icon({ name }: { name: string }): ReactNode {
         <path d="M4 19a2 2 0 0 1 2-2h13" />
       </>
     ),
+    gear: (
+      <>
+        <line x1="3.5" y1="8" x2="20.5" y2="8" />
+        <circle cx="9" cy="8" r="2.4" fill="none" />
+        <line x1="3.5" y1="16" x2="20.5" y2="16" />
+        <circle cx="15" cy="16" r="2.4" fill="none" />
+      </>
+    ),
   };
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -97,6 +105,7 @@ const NAV = [
   { to: "/webhooks", label: "Webhooks", icon: "webhook", adminOnly: true },
   { to: "/apikeys", label: "API Keys", icon: "key" },
   { to: "/users", label: "Users", icon: "user", adminOnly: true },
+  { to: "/settings", label: "Settings", icon: "gear", adminOnly: true },
   { to: "/docs", label: "Documentation", icon: "book" },
 ];
 

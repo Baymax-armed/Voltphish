@@ -157,6 +157,14 @@ export interface AiTemplate {
   text: string | null;
 }
 
+export interface AiSettings {
+  provider: string;
+  model: string;
+  has_key: boolean;
+  key_hint: string;
+  providers: { value: string; label: string }[];
+}
+
 export interface DashboardData {
   campaigns: { total: number; active: number; completed: number; draft: number; scheduled: number };
   funnel: {

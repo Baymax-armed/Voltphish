@@ -1,0 +1,24 @@
+# Pinned per CLAUDE.md A06 (no wildcard ranges in prod manifests).
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+pydantic==2.10.4
+pydantic-settings==2.7.1
+email-validator==2.2.0
+argon2-cffi==23.1.0
+python-multipart==0.0.20
+jinja2==3.1.5
+aiosmtplib==3.0.2
+itsdangerous==2.2.0
+cryptography==44.0.0
+alembic==1.14.0
+# httpx is used at runtime for outbound webhook delivery (and in tests).
+httpx==0.28.1
+# segno: pure-Python QR generation for quishing (QR-phishing) simulations. No
+# C deps, no PIL — writes PNG directly. (A06: pinned, actively maintained.)
+segno==1.6.1
+# dnspython: DNS TXT lookups for the deliverability pre-flight (SPF/DKIM/DMARC).
+dnspython==2.7.0
+
+# Dev / test
+pytest==8.3.4

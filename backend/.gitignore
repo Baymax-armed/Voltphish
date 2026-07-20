@@ -1,0 +1,20 @@
+# Secrets & local config
+.env
+*.db
+*.sqlite3
+
+# Mail testing output (may contain simulated recipient data)
+outbox/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

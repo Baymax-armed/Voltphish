@@ -1,0 +1,43 @@
+# ── Secrets & local config ───────────────────────────────
+.env
+*.env
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── Databases & runtime data (may contain real data/secrets) ──
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+/data/
+backend/data/
+outbox/
+backend/outbox/
+*.eml
+
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Node / frontend ──────────────────────────────────────
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+*.local
+
+# ── Editors / OS ─────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

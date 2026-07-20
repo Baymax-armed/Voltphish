@@ -1,0 +1,16 @@
+# keep the build context small & secret-free
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/node_modules
+frontend/dist
+**/.pytest_cache
+**/*.db
+**/*.sqlite3
+backend/outbox
+**/.env
+.git
+.gitignore
+**/.vscode
+**/.idea

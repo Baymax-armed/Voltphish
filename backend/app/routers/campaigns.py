@@ -9,6 +9,7 @@ log = logging.getLogger("voltphish.campaigns")
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
@@ -24,10 +25,12 @@ from ..models import (
     LandingPage,
     ResultStatus,
     SendingProfile,
+    Target,
     Template,
     User,
     utcnow,
 )
+from ..services.audience import OUTCOMES, campaign_results
 from ..schemas.campaign import (
     CampaignCreate,
     CampaignDetail,
@@ -224,6 +227,60 @@ async def launch_campaign(
     db.refresh(campaign)
     log.info("campaign %s launched by %s (auth_ref=%r)", campaign.id, user.email, campaign.authorization_ref)
     return _detail(campaign)
+
+
+class SaveGroupIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    outcome: str = "clicked"  # all | clicked | submitted | opened | reported | no_action
+
+
+class SaveGroupOut(BaseModel):
+    group_id: int
+    name: str
+    added: int
+
+
+@router.post("/{campaign_id}/save-group", response_model=SaveGroupOut, status_code=status.HTTP_201_CREATED)
+def save_audience_as_group(
+    campaign_id: int, payload: SaveGroupIn, db: DbSession = Depends(get_db)
+) -> SaveGroupOut:
+    """Snapshot the recipients of a campaign (optionally just those who failed a
+    given way) into a reusable group, so the same people can be re-tested."""
+    campaign = db.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaign not found")
+    if payload.outcome not in OUTCOMES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown outcome filter")
+
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Group name is required")
+
+    # Dedupe by lowercased email, keeping one snapshot per person (their name at
+    # send time — targets may have changed since).
+    seen: dict[str, object] = {}
+    for r in campaign_results(db, campaign_id, payload.outcome):
+        key = (r.email or "").strip().lower()
+        if key and key not in seen:
+            seen[key] = r
+    if not seen:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No recipients match that outcome")
+
+    group = Group(name=name)
+    db.add(group)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "A group with that name already exists")
+
+    for key, r in seen.items():
+        db.add(Target(
+            group_id=group.id, email=key,
+            first_name=r.first_name, last_name=r.last_name, position=r.position,
+        ))
+    db.commit()
+    return SaveGroupOut(group_id=group.id, name=name, added=len(seen))
 
 
 @router.delete("/{campaign_id}", response_model=Message)

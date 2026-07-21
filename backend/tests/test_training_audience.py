@@ -124,6 +124,39 @@ def test_assign_by_campaign_outcome_dedupes(auth_client: TestClient, seeded: tup
     assert "0" in r2.json()["detail"]
 
 
+def test_save_audience_as_group(auth_client: TestClient, seeded: tuple[int, int]) -> None:
+    cid, _ = seeded
+
+    # Save everyone who clicked (incl. submitters) as a reusable group.
+    r = auth_client.post(
+        f"/api/v1/campaigns/{cid}/save-group",
+        json={"name": "QA clickers retest", "outcome": "clicked"},
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["added"] == 2  # alice (submitted) + bob (clicked)
+
+    # The group is real and contains exactly those two, lowercased.
+    groups = auth_client.get("/api/v1/groups").json()
+    grp = next(g for g in groups if g["id"] == body["group_id"])
+    assert grp["target_count"] == 2
+
+    # Duplicate name is rejected, not silently merged.
+    dup = auth_client.post(
+        f"/api/v1/campaigns/{cid}/save-group",
+        json={"name": "QA clickers retest", "outcome": "clicked"},
+    )
+    assert dup.status_code == 409, dup.text
+
+    # A different outcome makes a different group (no_action = erin + frank).
+    other = auth_client.post(
+        f"/api/v1/campaigns/{cid}/save-group",
+        json={"name": "QA no-action", "outcome": "no_action"},
+    )
+    assert other.status_code == 201, other.text
+    assert other.json()["added"] == 2
+
+
 def test_assign_requires_recipients(auth_client: TestClient, seeded: tuple[int, int]) -> None:
     cid, mid = seeded
     # "reported" is a single recipient here, but pair an empty email list with a

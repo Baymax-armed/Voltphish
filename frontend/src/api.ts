@@ -247,4 +247,6 @@ export const api = {
     request<CampaignDetail>("POST", `/campaigns/${id}/launch`, body),
   campaignEvents: (id: number) => request<EventItem[]>("GET", `/campaigns/${id}/events`),
   deleteCampaign: (id: number) => request<{ detail: string }>("DELETE", `/campaigns/${id}`),
+  saveCampaignGroup: (id: number, p: { name: string; outcome: string }) =>
+    request<{ group_id: number; name: string; added: number }>("POST", `/campaigns/${id}/save-group`, p),
 };

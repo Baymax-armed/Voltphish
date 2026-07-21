@@ -21,7 +21,6 @@ from ..models import (
     Group,
     QuizQuestion,
     Result,
-    ResultStatus,
     Target,
     TrainingEnrollment,
     TrainingModule,
@@ -93,26 +92,10 @@ class EnrollmentOut(BaseModel):
     completed_at: str | None
 
 
-# Campaign-outcome → who to remediate. The core "train the people who failed" loop.
-def _outcome_filter(outcome: str):
-    return {
-        "all": None,
-        "clicked": Result.status.in_([ResultStatus.clicked, ResultStatus.submitted]),
-        "submitted": Result.status == ResultStatus.submitted,
-        "opened": Result.status == ResultStatus.opened,
-        "reported": Result.status == ResultStatus.reported,
-        "no_action": Result.status.in_(
-            [ResultStatus.sent, ResultStatus.scheduled, ResultStatus.sending, ResultStatus.error]
-        ),
-    }.get(outcome, None)
-
-
-def _campaign_emails(db: DbSession, campaign_id: int, outcome: str) -> set[str]:
-    q = select(Result.email).where(Result.campaign_id == campaign_id)
-    f = _outcome_filter(outcome)
-    if outcome != "all" and f is not None:
-        q = q.where(f)
-    return {r[0].strip().lower() for r in db.execute(q).all() if r[0]}
+# Campaign-outcome → who to remediate. The core "train the people who failed"
+# loop. The outcome→who mapping lives in services.audience so 'save as group'
+# uses exactly the same definitions.
+from ..services.audience import campaign_emails as _campaign_emails  # noqa: E402
 
 
 class AssignIn(BaseModel):

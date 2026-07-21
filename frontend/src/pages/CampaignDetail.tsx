@@ -21,6 +21,7 @@ export default function CampaignDetail() {
   const [auto, setAuto] = useState(true);
   const [launchOpen, setLaunchOpen] = useState(false);
   const [trainOpen, setTrainOpen] = useState<string>("");
+  const [groupOpen, setGroupOpen] = useState(false);
   const timer = useRef<number | null>(null);
 
   const load = useCallback(
@@ -109,6 +110,11 @@ export default function CampaignDetail() {
               🎓 Assign training
             </button>
           )}
+          {total > 0 && (
+            <button className="btn" onClick={() => setGroupOpen(true)} title="Save these recipients as a reusable group to re-test later">
+              💾 Save as group
+            </button>
+          )}
           {(c.status === "draft" || c.status === "scheduled") && (
             <button className="btn primary" onClick={() => setLaunchOpen(true)} disabled={busy}>
               {c.status === "scheduled" ? "▶ Launch now" : "▶ Launch"}
@@ -126,6 +132,15 @@ export default function CampaignDetail() {
           singleEmail={trainOpen === "bulk" ? null : trainOpen}
           onClose={() => setTrainOpen("")}
           onDone={(msg) => { setTrainOpen(""); notify(msg, "ok"); }}
+        />
+      )}
+
+      {groupOpen && (
+        <SaveGroupModal
+          campaignId={cid}
+          campaignName={c.name}
+          onClose={() => setGroupOpen(false)}
+          onDone={(msg) => { setGroupOpen(false); notify(msg, "ok"); }}
         />
       )}
 
@@ -356,6 +371,79 @@ function CampaignTrainingModal({
         <button className="btn" onClick={onClose}>Cancel</button>
         <button className="btn primary" onClick={submit} disabled={busy || moduleId === ""}>
           {busy ? "Assigning…" : "Assign"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function SaveGroupModal({
+  campaignId, campaignName, onClose, onDone,
+}: {
+  campaignId: number;
+  campaignName: string;
+  onClose: () => void;
+  onDone: (msg: string) => void;
+}) {
+  const { notify } = useToast();
+  const [outcome, setOutcome] = useState("clicked");
+  const [name, setName] = useState("");
+  const [preview, setPreview] = useState<{ count: number; total: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Suggest a sensible default name that reflects the current filter.
+  useEffect(() => {
+    const label = TRAINING_OUTCOMES.find((o) => o.value === outcome)?.label ?? outcome;
+    setName(`${campaignName} — ${label}`.slice(0, 120));
+  }, [outcome, campaignName]);
+
+  useEffect(() => {
+    let alive = true;
+    api.trainingAudience({ campaign_id: campaignId, outcome })
+      .then((r) => { if (alive) setPreview(r); })
+      .catch(() => { if (alive) setPreview(null); });
+    return () => { alive = false; };
+  }, [campaignId, outcome]);
+
+  const submit = async () => {
+    if (!name.trim()) { notify("Give the group a name", "error"); return; }
+    setBusy(true);
+    try {
+      const r = await api.saveCampaignGroup(campaignId, { name: name.trim(), outcome });
+      onDone(`Saved “${r.name}” with ${r.added} recipient(s).`);
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "Save failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="Save recipients as a group" onClose={onClose}>
+      <div className="field">
+        <label>Who to include</label>
+        <select value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+          {TRAINING_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {preview && (
+          <span className="hint" style={{ marginTop: 6 }}>
+            <strong style={{ color: "var(--accent)" }}>{preview.count}</strong> of {preview.total} recipient(s)
+            will be saved (deduped by email).
+          </span>
+        )}
+      </div>
+      <div className="field">
+        <label>Group name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} placeholder="e.g. Q3 clickers — retest" />
+      </div>
+      <div className="banner" style={{ margin: 0 }}>
+        Creates a reusable group you can target in a new campaign — the classic
+        “re-test the people who fell for it” loop. Names are snapshotted from this campaign.
+      </div>
+      <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+        <button className="btn" onClick={onClose}>Cancel</button>
+        <button className="btn primary" onClick={submit} disabled={busy || !name.trim() || (preview?.count ?? 1) === 0}>
+          {busy ? "Saving…" : "Save group"}
         </button>
       </div>
     </Modal>

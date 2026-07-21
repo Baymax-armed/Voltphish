@@ -29,6 +29,8 @@ log = logging.getLogger("voltphish.tunnel")
 
 _CACHE_TTL = 15.0  # seconds
 _cache: tuple[float, str | None] = (0.0, None)
+_detect_lock = threading.Lock()
+_detecting = False
 
 # ── App-managed per-campaign quick tunnels ──────────────────────────────────
 # When the cloudflared binary is bundled, the app can spawn a dedicated quick
@@ -128,31 +130,41 @@ def stop_campaign_tunnel(campaign_id: int) -> None:
         _stop_locked(campaign_id)
 
 
-def detect_public_url(*, force: bool = False) -> str | None:
-    """Return the tunnel's public https URL, or None if no tunnel is configured
-    or reachable."""
-    global _cache
+def _refresh_shared_detect() -> None:
+    global _cache, _detecting
     metrics = get_settings().tunnel_metrics_url.strip()
-    if not metrics:
-        return None
-
-    now = time.monotonic()
-    if not force and now - _cache[0] < _CACHE_TTL:
-        return _cache[1]
-
     url: str | None = None
-    try:
-        resp = httpx.get(metrics.rstrip("/") + "/quicktunnel", timeout=3.0)
-        if resp.status_code == 200:
-            host = (resp.json() or {}).get("hostname", "").strip()
-            if host:
-                url = host if host.startswith("http") else f"https://{host}"
-    except Exception as exc:  # noqa: BLE001 — detection must never break the UI/links
-        log.debug("tunnel detect failed: %s", exc)
-        url = None
+    if metrics:
+        try:
+            resp = httpx.get(metrics.rstrip("/") + "/quicktunnel", timeout=httpx.Timeout(2.5, connect=2.5))
+            if resp.status_code == 200:
+                host = (resp.json() or {}).get("hostname", "").strip()
+                if host:
+                    url = host if host.startswith("http") else f"https://{host}"
+        except Exception as exc:  # noqa: BLE001 — sidecar down / host unresolvable
+            log.debug("tunnel detect failed: %s", exc)
+    with _detect_lock:
+        _cache = (time.monotonic(), url)
+        _detecting = False
 
-    _cache = (now, url)
-    return url
+
+def detect_public_url(*, force: bool = False) -> str | None:
+    """Return the shared sidecar tunnel's public URL, or None. NON-BLOCKING:
+    returns the cached value immediately and refreshes it in a background thread,
+    so a hung/unresolvable sidecar host can never stall the caller (e.g. the
+    campaign form, which mainly needs `managed`). A live sidecar shows up on the
+    next poll a second or two later."""
+    global _detecting
+    if not get_settings().tunnel_metrics_url.strip():
+        return None
+    now = time.monotonic()
+    with _detect_lock:
+        stale = now - _cache[0] >= _CACHE_TTL
+        cached = _cache[1]
+        if (stale or force) and not _detecting:
+            _detecting = True
+            threading.Thread(target=_refresh_shared_detect, daemon=True).start()
+    return cached
 
 
 def resolve_public_base_url() -> str:

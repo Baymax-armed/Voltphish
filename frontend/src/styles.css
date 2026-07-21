@@ -386,6 +386,41 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
 }
 .chip:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
+/* ── Campaign wizard (guided multi-step form) ───────── */
+.wiz-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.wiz-steps { display: flex; gap: 2px; flex-wrap: wrap; }
+.wiz-step {
+  display: inline-flex; align-items: center; gap: 7px; background: none; border: none;
+  cursor: pointer; color: var(--text-dim); font: inherit; font-size: var(--fs-sm);
+  font-weight: 600; padding: 5px 9px; border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.wiz-step:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.wiz-step:focus-visible { outline: none; box-shadow: var(--ring); }
+.wiz-step.active { color: var(--text); }
+.wiz-num {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-dim);
+}
+.wiz-step.active .wiz-num { background: var(--accent-grad); border: none; color: #fff; }
+.wiz-step.done:not(.active) .wiz-num { border-color: color-mix(in srgb, var(--good) 60%, var(--border)); color: var(--good); }
+.wiz-compact { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+.wiz-compact input { width: auto; accent-color: var(--accent); }
+.wizard { display: grid; grid-template-columns: 1fr 210px; gap: 20px; align-items: start; }
+.wiz-rail {
+  position: sticky; top: 60px;
+  background: color-mix(in srgb, var(--text) 3%, var(--bg-panel));
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-size: var(--fs-sm);
+}
+.wiz-rail h4 { margin: 0 0 10px; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+.wiz-rail .ri { display: flex; flex-direction: column; gap: 1px; margin-bottom: 11px; }
+.wiz-rail .ri .k { font-size: 11px; color: var(--text-muted); }
+.wiz-rail .ri .v { color: var(--text); font-weight: 600; word-break: break-word; }
+.wiz-sec-head { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin: 8px 0 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.wiz-sec-head:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.wiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+@media (max-width: 720px) { .wizard { grid-template-columns: 1fr; } .wiz-rail { position: static; } }
+
 /* ── Buttons ────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 7px;

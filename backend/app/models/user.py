@@ -4,7 +4,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -31,6 +31,8 @@ class User(Base):
     # may exist while pending enrollment — `totp_enabled` gates the login check.
     totp_secret_enc: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Last accepted TOTP time-step — a code at step N can't be replayed (RFC 6238).
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Granular RBAC: extra capabilities granted to a non-admin (CSV of permission
     # keys). Admins implicitly hold every permission; this delegates specific
     # admin areas (e.g. "users:manage") to an operator without full admin.

@@ -75,6 +75,57 @@ def test_report_ingest_requires_token(client: TestClient):
     assert r.status_code == 401
 
 
+def test_report_credit_requires_reporter_match(auth_client: TestClient):
+    """A leaked ingest token + a known rid must NOT let a non-recipient credit
+    the champion — only the actual recipient's report is credited."""
+    import secrets
+
+    from app.database import SessionLocal
+    from app.models import Campaign, Group, Result, ResultStatus, Template, utcnow
+    from app.models.campaign import CampaignStatus
+
+    db = SessionLocal()
+    t = Template(name=f"ri-t-{secrets.token_hex(3)}", channel="email", subject="s", html="<p>x</p>", created_at=utcnow(), modified_at=utcnow())
+    g = Group(name=f"ri-g-{secrets.token_hex(3)}", created_at=utcnow(), modified_at=utcnow())
+    db.add_all([t, g]); db.flush()
+    c = Campaign(name=f"ri-c-{secrets.token_hex(3)}", status=CampaignStatus.in_progress, channel="email",
+                 template_id=t.id, group_id=g.id, phish_url="http://testserver", created_at=utcnow())
+    db.add(c); db.flush()
+    rid = "RIRID" + secrets.token_hex(4)
+    res = Result(campaign_id=c.id, rid=rid, email="victim@corp.com", status=ResultStatus.clicked, created_at=utcnow())
+    db.add(res); db.commit()
+    rid_body = f"suspicious link https://h/c/{rid}"
+
+    token = auth_client.get("/api/v1/reported/addin/config").json()["token"]
+    # attacker (different reporter) with the victim's rid -> NOT credited
+    r = auth_client.post("/api/v1/inbound/report", headers={"X-Report-Token": token},
+                         json={"reporter_email": "attacker@corp.com", "subject": "x", "body": rid_body})
+    assert r.json()["simulation"] is False
+    db.expire_all()
+    assert db.get(Result, res.id).status == ResultStatus.clicked  # not credited
+    # the real recipient -> credited
+    r2 = auth_client.post("/api/v1/inbound/report", headers={"X-Report-Token": token},
+                          json={"reporter_email": "victim@corp.com", "subject": "x", "body": rid_body})
+    assert r2.json()["simulation"] is True
+    db.expire_all()
+    assert db.get(Result, res.id).status == ResultStatus.reported
+    db.close()
+
+
+def test_totp_matched_step_and_replay_guard():
+    import pyotp
+
+    from app.services.totp import matched_step
+
+    secret = pyotp.random_base32()
+    code = pyotp.TOTP(secret).now()
+    step = matched_step(secret, code)
+    assert step is not None
+    # the same code resolves to the same step, so the login path rejects reuse
+    assert matched_step(secret, code) == step
+    assert matched_step(secret, "000000") in (None,) or matched_step(secret, "000000") != step
+
+
 def test_report_real_email_goes_to_triage(auth_client: TestClient):
     token = auth_client.get("/api/v1/reported/addin/config").json()["token"]
     r = auth_client.post(

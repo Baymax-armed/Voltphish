@@ -65,7 +65,14 @@ def ingest_report(
 
     Commits its own work. The caller (HTTP endpoint) has already authenticated."""
     result = _match_result(db, body=body, reporter=reporter_email)
-    is_sim = result is not None
+
+    # SECURITY: the add-in ingest token is embedded in a public page, so treat it
+    # as a weak gate, not proof of identity. Only CREDIT the Champion (record a
+    # `reported` event) when the reporter is the actual recipient of that sim —
+    # otherwise a leaked token + a known rid could falsely credit someone or
+    # poison "reported" metrics. Unconfirmed matches are still filed for review.
+    reporter = (reporter_email or "").strip().lower()
+    credited = result is not None and bool(reporter) and result.email.lower() == reporter
 
     row = ReportedEmail(
         reporter_email=(reporter_email or None),
@@ -74,15 +81,14 @@ def ingest_report(
         body_preview=(body or "")[:_PREVIEW_LEN] or None,
         headers=(headers or "")[:_PREVIEW_LEN] or None,
         source=source,
-        is_simulation=is_sim,
+        is_simulation=result is not None,
         matched_rid=result.rid if result else None,
         matched_result_id=result.id if result else None,
-        status=ReportStatus.benign if is_sim else ReportStatus.new,
+        status=ReportStatus.benign if credited else ReportStatus.new,
     )
     db.add(row)
 
-    if result is not None:
-        # Credit the champion (idempotent-ish: reported status is terminal-safe).
+    if credited:
         record_event(db, campaign_id=result.campaign_id, rid=result.rid, type=EventType.reported)
         db.commit()
         log.info("report: simulation reported rid=%s reporter=%s", result.rid, reporter_email)

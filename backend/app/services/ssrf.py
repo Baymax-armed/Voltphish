@@ -30,9 +30,14 @@ class SsrfError(ValueError):
 
 
 def _ip_is_blocked(ip: str) -> bool:
-    if ip in _BLOCKED_IPS:
-        return True
     addr = ipaddress.ip_address(ip)
+    # Unwrap IPv4-mapped/compatible IPv6 (e.g. ::ffff:169.254.169.254) so the
+    # classification below sees the real IPv4 address instead of letting it pass.
+    mapped = getattr(addr, "ipv4_mapped", None)
+    if mapped is not None:
+        addr = mapped
+    if ip in _BLOCKED_IPS or str(addr) in _BLOCKED_IPS:
+        return True
     return (
         addr.is_private
         or addr.is_loopback

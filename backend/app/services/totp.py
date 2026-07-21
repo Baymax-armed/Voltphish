@@ -8,7 +8,9 @@ window to tolerate mild clock drift.
 from __future__ import annotations
 
 import base64
+import hmac
 import io
+import time
 
 import pyotp
 import segno
@@ -26,17 +28,33 @@ def provisioning_uri(secret: str, account: str) -> str:
     return pyotp.TOTP(secret).provisioning_uri(name=account, issuer_name=_ISSUER)
 
 
+_INTERVAL = 30
+
+
 def verify(secret: str, code: str) -> bool:
     """True if `code` is valid for `secret` now (±1 step for clock drift)."""
+    return matched_step(secret, code) is not None
+
+
+def matched_step(secret: str, code: str) -> int | None:
+    """Return the TOTP time-step the code matches (±1 for drift), or None. The
+    step lets the caller reject replays (a code accepted at step N must not be
+    accepted again — RFC 6238)."""
     if not secret or not code:
-        return False
+        return None
     code = code.strip().replace(" ", "")
     if not code.isdigit() or len(code) != 6:
-        return False
+        return None
     try:
-        return pyotp.TOTP(secret).verify(code, valid_window=1)
+        totp = pyotp.TOTP(secret)
+        now = int(time.time())
+        for offset in (-1, 0, 1):
+            ts = now + offset * _INTERVAL
+            if hmac.compare_digest(totp.at(ts), code):
+                return ts // _INTERVAL
     except Exception:
-        return False
+        return None
+    return None
 
 
 def qr_data_uri(uri: str) -> str:

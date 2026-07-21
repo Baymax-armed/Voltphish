@@ -36,6 +36,7 @@ from ..security import (
 )
 from ..services.ratelimit import make_rate_limiter
 from ..services import totp as totp_svc
+from ..services.totp import matched_step as totp_matched_step
 from ..services.totp import verify as totp_verify
 from pydantic import BaseModel, Field as PField
 
@@ -134,10 +135,14 @@ def login(
                 two_factor_required=True,
             )
         secret = decrypt_secret(user.totp_secret_enc)
-        if not secret or not totp_verify(secret, payload.code):
+        step = totp_matched_step(secret, payload.code) if secret else None
+        # Reject an invalid code, OR a code whose time-step was already used
+        # (anti-replay: a captured code can't be reused within its window).
+        if step is None or (user.totp_last_step is not None and step <= user.totp_last_step):
             _login_limiter.record_failure(rl_key)
             log.info("login 2fa failed email=%s ip=%s", payload.email, ip)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication code")
+        user.totp_last_step = step
 
     # Opportunistic rehash if parameters changed.
     if needs_rehash(user.password_hash):

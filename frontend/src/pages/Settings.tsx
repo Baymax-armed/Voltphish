@@ -107,10 +107,11 @@ export default function Settings() {
       <div className="page-head">
         <div>
           <h1>Settings</h1>
-          <div className="page-sub">Configure the AI provider used to generate content</div>
+          <div className="page-sub">AI generation, reported-phish mailbox, SSO, benchmarks, allowlists &amp; 2FA</div>
         </div>
       </div>
 
+      <div className="settings-grid">
       {!cfg ? (
         <div className="card" style={{ maxWidth: 640 }}>
           <FormSkeleton fields={3} />
@@ -207,6 +208,7 @@ export default function Settings() {
       <BenchmarkCard />
       <AllowlistCard />
       <TwoFactorCard />
+      </div>
     </>
   );
 }

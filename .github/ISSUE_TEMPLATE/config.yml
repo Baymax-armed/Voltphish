@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/Baymax-armed/Voltphish/security/advisories/new
+    about: Please report vulnerabilities privately — do not open a public issue. See SECURITY.md.
+  - name: 📖 Documentation
+    url: https://github.com/Baymax-armed/Voltphish#readme
+    about: Setup, deployment, and usage docs live in the README.

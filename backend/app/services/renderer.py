@@ -105,24 +105,6 @@ def render_subject(subject: str, ctx: RenderContext) -> str:
     return rendered.replace("\r", " ").replace("\n", " ")
 
 
-def render_sms(body: str, ctx: RenderContext) -> str:
-    """Render an SMS body: plain-text token substitution, with {{.URL}} as the
-    SHORT click-tracking link so the message stays small."""
-    short = tracker.short_click_url(ctx.phish_url, ctx.short_code) if ctx.short_code else tracker.click_url(ctx.phish_url, ctx.rid)
-    out = body
-    replacements = {
-        "{{.FirstName}}": ctx.first_name or "",
-        "{{.LastName}}": ctx.last_name or "",
-        "{{.Email}}": ctx.email or "",
-        "{{.Position}}": ctx.position or "",
-        "{{.RId}}": ctx.rid,
-        "{{.URL}}": short,
-    }
-    for token, value in replacements.items():
-        out = out.replace(token, value)
-    return out
-
-
 _FORM_TAG = re.compile(r"<form\b([^>]*)>", re.IGNORECASE)
 _ACTION_ATTR = re.compile(r"""\saction\s*=\s*(?:"[^"]*"|'[^']*'|\S+)""", re.IGNORECASE)
 _METHOD_ATTR = re.compile(r"\smethod\s*=", re.IGNORECASE)

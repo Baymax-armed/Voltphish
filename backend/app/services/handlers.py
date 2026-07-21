@@ -123,62 +123,6 @@ async def handle_send_email(payload: dict) -> None:
         db.close()
 
 
-@register("send_sms")
-async def handle_send_sms(payload: dict) -> None:
-    from ..models import SmsProfile
-    from .renderer import render_sms
-    from .smsapi import SmsError, send_sms
-
-    result_id = int(payload["result_id"])
-    db = SessionLocal()
-    try:
-        result = db.get(Result, result_id)
-        if result is None:
-            return
-        campaign = db.get(Campaign, result.campaign_id)
-        if campaign is None:
-            return
-        if result.status in _TERMINAL_DELIVERED:
-            return
-        profile = db.get(SmsProfile, campaign.sms_profile_id) if campaign.sms_profile_id else None
-        if profile is None:
-            result.status = ResultStatus.error
-            result.send_error = "No SMS profile configured"
-            record_event(db, campaign_id=campaign.id, rid=result.rid, type=EventType.email_error,
-                         details={"error": "no sms profile"})
-            db.commit()
-            _maybe_complete(db, campaign.id)
-            return
-
-        ctx = RenderContext(
-            first_name=result.first_name or "", last_name=result.last_name or "",
-            email=result.email, position=result.position or "", rid=result.rid,
-            phish_url=campaign.phish_url, short_code=result.short_code or "",
-        )
-        body = render_sms(campaign.template.text or "", ctx)
-
-        result.status = ResultStatus.sending
-        db.commit()
-        try:
-            await send_sms(profile, result.phone or "", body)
-        except (SmsError, Exception) as exc:  # noqa: BLE001
-            reason = f"{type(exc).__name__}: {exc}" if not isinstance(exc, SmsError) else str(exc)
-            log.warning("sms send failed campaign=%s rid=%s: %s", campaign.id, result.rid, reason)
-            result.send_error = reason[:500]
-            record_event(db, campaign_id=campaign.id, rid=result.rid,
-                         type=EventType.email_error, details={"error": reason[:200]})
-            db.commit()
-            _maybe_complete(db, campaign.id)
-            return
-
-        result.sent_at = utcnow()
-        record_event(db, campaign_id=campaign.id, rid=result.rid, type=EventType.email_sent)
-        db.commit()
-        _maybe_complete(db, campaign.id)
-    finally:
-        db.close()
-
-
 def _maybe_complete(db, campaign_id: int) -> None:
     """Mark the campaign completed once no recipients remain to be sent."""
     remaining = (

@@ -9,10 +9,8 @@ from ..models import CampaignStatus, ResultStatus
 
 class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    channel: str = Field(default="email", pattern="^(email|sms)$")
     template_id: int
-    profile_id: int | None = None       # email channel
-    sms_profile_id: int | None = None   # sms channel
+    profile_id: int | None = None
     group_id: int
     page_id: int | None = None
     phish_url: AnyHttpUrl
@@ -23,12 +21,8 @@ class CampaignCreate(BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> "CampaignCreate":
-        if self.channel == "sms":
-            if self.sms_profile_id is None:
-                raise ValueError("sms_profile_id is required for an SMS campaign")
-        else:
-            if self.profile_id is None:
-                raise ValueError("profile_id is required for an email campaign")
+        if self.profile_id is None:
+            raise ValueError("profile_id is required")
         if self.send_by_at is not None and self.launch_at is not None and self.send_by_at <= self.launch_at:
             raise ValueError("send_by_at must be after launch_at")
         return self
@@ -58,7 +52,6 @@ class CampaignOut(BaseModel):
     channel: str
     template_id: int
     profile_id: int | None
-    sms_profile_id: int | None
     group_id: int
     page_id: int | None
     phish_url: str

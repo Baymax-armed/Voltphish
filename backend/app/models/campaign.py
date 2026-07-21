@@ -28,12 +28,10 @@ class Campaign(Base):
         Enum(CampaignStatus), default=CampaignStatus.draft, nullable=False
     )
 
-    # Delivery channel: "email" (default) or "sms".
+    # Delivery channel — always "email" (kept for schema stability).
     channel: Mapped[str] = mapped_column(String(10), default="email", nullable=False)
     template_id: Mapped[int] = mapped_column(ForeignKey("templates.id"), nullable=False)
-    # Email profile (channel=email) OR sms profile (channel=sms); one is used.
     profile_id: Mapped[int | None] = mapped_column(ForeignKey("sending_profiles.id"), nullable=True)
-    sms_profile_id: Mapped[int | None] = mapped_column(ForeignKey("sms_profiles.id"), nullable=True)
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), nullable=False)
     # Optional custom landing page. When null, a click redirects to redirect_url
     # (if set) or the built-in awareness page.

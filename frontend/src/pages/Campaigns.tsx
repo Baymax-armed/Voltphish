@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api";
-import type { Campaign, GroupSummary, PageSummary, Profile, SmsProfile, Template } from "../types";
+import type { Campaign, GroupSummary, PageSummary, Profile, Template } from "../types";
 import { Badge, BulkBar, Empty, FormSkeleton, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
 import { confirmDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
@@ -50,8 +50,8 @@ export default function Campaigns() {
   const clone = async (c: Campaign) => {
     try {
       await api.createCampaign({
-        name: `${c.name} (copy)`, channel: c.channel, template_id: c.template_id,
-        profile_id: c.profile_id, sms_profile_id: c.sms_profile_id, group_id: c.group_id,
+        name: `${c.name} (copy)`, template_id: c.template_id,
+        profile_id: c.profile_id, group_id: c.group_id,
         page_id: c.page_id, phish_url: c.phish_url, redirect_url: c.redirect_url,
       });
       notify("Campaign cloned as draft");
@@ -106,7 +106,6 @@ export default function Campaigns() {
                   />
                 </th>
                 <th>Name</th>
-                <th>Channel</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th className="actions-col"></th>
@@ -123,7 +122,6 @@ export default function Campaigns() {
                       <strong>{c.name}</strong>
                     </Link>
                   </td>
-                  <td>{c.channel === "sms" ? "📱 SMS" : "📧 Email"}</td>
                   <td>
                     <Badge status={c.status} />
                   </td>
@@ -156,17 +154,14 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
-  const [smsProfiles, setSmsProfiles] = useState<SmsProfile[]>([]);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [launch, setLaunch] = useState(true);
-  const [channel] = useState<"email" | "sms">("email");
 
   const [f, setF] = useState({
     name: "",
     template_id: 0,
     profile_id: 0,
-    sms_profile_id: 0,
     group_id: 0,
     page_id: 0, // 0 => built-in awareness page
     phish_url: window.location.origin,
@@ -175,41 +170,26 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
     send_by_at: "",
   });
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
-  const channelTemplates = templates.filter((t) => t.channel === channel);
 
   useEffect(() => {
     Promise.all([
-      api.listTemplates(), api.listGroups(), api.listProfiles(), api.listPages(), api.listSmsProfiles(),
-    ]).then(([t, g, p, pg, sp]) => {
+      api.listTemplates(), api.listGroups(), api.listProfiles(), api.listPages(),
+    ]).then(([t, g, p, pg]) => {
       setTemplates(t);
       setGroups(g);
       setProfiles(p);
       setPages(pg);
-      setSmsProfiles(sp);
       setF((prev) => ({
         ...prev,
         template_id: t[0]?.id ?? 0,
         group_id: g[0]?.id ?? 0,
         profile_id: p[0]?.id ?? 0,
-        sms_profile_id: sp[0]?.id ?? 0,
       }));
       setReady(true);
     });
   }, []);
 
-  // Keep the selected template valid for the chosen channel.
-  useEffect(() => {
-    if (channelTemplates.length && !channelTemplates.some((t) => t.id === f.template_id)) {
-      set("template_id", channelTemplates[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, templates]);
-
-  const missing =
-    ready &&
-    (!groups.length ||
-      (channel === "email" ? !templates.some((t) => t.channel === "email") || !profiles.length
-        : !templates.some((t) => t.channel === "sms") || !smsProfiles.length));
+  const missing = ready && (!groups.length || !templates.length || !profiles.length);
 
   const scheduled = f.launch_at !== "";
 
@@ -219,12 +199,10 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
     try {
       const created = await api.createCampaign({
         name: f.name,
-        channel,
         template_id: f.template_id,
-        profile_id: channel === "email" ? f.profile_id : null,
-        sms_profile_id: channel === "sms" ? f.sms_profile_id : null,
+        profile_id: f.profile_id,
         group_id: f.group_id,
-        page_id: channel === "email" ? f.page_id || null : null,
+        page_id: f.page_id || null,
         phish_url: f.phish_url,
         redirect_url: f.redirect_url || null,
         launch_at: f.launch_at ? new Date(f.launch_at).toISOString() : null,
@@ -272,9 +250,9 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
             <input value={f.name} onChange={(e) => set("name", e.target.value)} required />
           </div>
           <div className="field">
-            <label>{channel === "sms" ? "SMS template" : "Email template"}</label>
+            <label>Email template</label>
             <select value={f.template_id} onChange={(e) => set("template_id", Number(e.target.value))}>
-              {channelTemplates.map((t) => (
+              {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -283,7 +261,7 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
           </div>
           <div className="row2">
             <div className="field">
-              <label>Target group {channel === "sms" && <span className="hint">(needs phone numbers)</span>}</label>
+              <label>Target group</label>
               <select value={f.group_id} onChange={(e) => set("group_id", Number(e.target.value))}>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
@@ -292,31 +270,18 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
                 ))}
               </select>
             </div>
-            {channel === "email" ? (
-              <div className="field">
-                <label>Sending profile</label>
-                <select value={f.profile_id} onChange={(e) => set("profile_id", Number(e.target.value))}>
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="field">
-                <label>SMS profile</label>
-                <select value={f.sms_profile_id} onChange={(e) => set("sms_profile_id", Number(e.target.value))}>
-                  {smsProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.provider})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="field">
+              <label>Sending profile</label>
+              <select value={f.profile_id} onChange={(e) => set("profile_id", Number(e.target.value))}>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          {channel === "email" && (
+          {(
             <div className="field">
               <label>
                 Landing page <span className="hint">what recipients see after clicking</span>

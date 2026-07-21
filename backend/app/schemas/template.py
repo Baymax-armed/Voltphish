@@ -22,7 +22,7 @@ class AttachmentCreate(BaseModel):
 
 class TemplateBase(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    channel: str = Field(default="email", pattern="^(email|sms)$")
+    channel: str = Field(default="email", pattern="^email$")
     subject: str = Field(default="", max_length=500)
     envelope_sender: EmailStr | None = None
     html: str | None = Field(default=None, max_length=1_000_000)
@@ -30,14 +30,10 @@ class TemplateBase(BaseModel):
 
     @model_validator(mode="after")
     def _need_a_body(self) -> "TemplateBase":
-        if self.channel == "sms":
-            if not self.text:
-                raise ValueError("SMS template needs a text body")
-        else:
-            if not self.subject:
-                raise ValueError("email template needs a subject")
-            if not (self.html or self.text):
-                raise ValueError("email template must have html and/or text body")
+        if not self.subject:
+            raise ValueError("email template needs a subject")
+        if not (self.html or self.text):
+            raise ValueError("email template must have html and/or text body")
         return self
 
 

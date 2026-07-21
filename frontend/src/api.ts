@@ -39,7 +39,6 @@ import type {
   TrainingEnrollment,
   TrainingModule,
   TrainingSummary,
-  SmsProfile,
   Template,
   TemplateImportResult,
   TimelinePoint,
@@ -178,15 +177,6 @@ export const api = {
     request<Profile>("PUT", `/profiles/${id}`, p),
   deleteProfile: (id: number) => request<{ detail: string }>("DELETE", `/profiles/${id}`),
   verifyProfile: (id: number) => request<{ detail: string }>("POST", `/profiles/${id}/verify`),
-
-  // SMS profiles
-  listSmsProfiles: () => request<SmsProfile[]>("GET", "/sms-profiles"),
-  createSmsProfile: (p: Record<string, unknown>) => request<SmsProfile>("POST", "/sms-profiles", p),
-  updateSmsProfile: (id: number, p: Record<string, unknown>) => request<SmsProfile>("PUT", `/sms-profiles/${id}`, p),
-  deleteSmsProfile: (id: number) => request<{ detail: string }>("DELETE", `/sms-profiles/${id}`),
-  verifySmsProfile: (id: number) => request<{ detail: string }>("POST", `/sms-profiles/${id}/verify`),
-  testSmsProfile: (id: number, to: string, message: string) =>
-    request<{ detail: string }>("POST", `/sms-profiles/${id}/test`, { to, message }),
 
   // runtime settings (for dev-mode banner)
   getSettings: () => request<RuntimeSettings>("GET", "/settings"),

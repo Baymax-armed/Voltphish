@@ -141,12 +141,11 @@ export default function Report() {
 
         <h2>Campaigns ({campaigns.length})</h2>
         <table>
-          <thead><tr><th>Name</th><th>Channel</th><th>Status</th></tr></thead>
+          <thead><tr><th>Name</th><th>Status</th></tr></thead>
           <tbody>
             {campaigns.slice(0, 20).map((c) => (
               <tr key={c.id}>
                 <td>{c.name}</td>
-                <td>{c.channel === "sms" ? "SMS" : "Email"}</td>
                 <td style={{ textTransform: "capitalize" }}>{String(c.status).replace(/_/g, " ")}</td>
               </tr>
             ))}

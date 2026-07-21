@@ -65,9 +65,8 @@ def enqueue_campaign(db: DbSession, campaign: Campaign) -> int:
 
     from datetime import timedelta
 
-    job_type = "send_sms" if campaign.channel == "sms" else "send_email"
     for i, result in enumerate(results):
         run_after = start + timedelta(seconds=gap * i) if gap else start
-        enqueue(db, job_type, {"result_id": result.id}, run_after=run_after)
-    log.info("campaign %s: queued %s %s job(s)", campaign.id, n, job_type)
+        enqueue(db, "send_email", {"result_id": result.id}, run_after=run_after)
+    log.info("campaign %s: queued %s send_email job(s)", campaign.id, n)
     return n

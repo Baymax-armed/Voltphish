@@ -21,7 +21,6 @@ from ..models import (
     LandingPage,
     ResultStatus,
     SendingProfile,
-    SmsProfile,
     Template,
     utcnow,
 )
@@ -88,21 +87,13 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
     template = db.get(Template, payload.template_id)
     if template is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "template_id does not exist")
-    if template.channel != payload.channel:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"template is not a {payload.channel} template")
-    if payload.channel == "sms":
-        if db.get(SmsProfile, payload.sms_profile_id) is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "sms_profile_id does not exist")
-    else:
-        if db.get(SendingProfile, payload.profile_id) is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "profile_id does not exist")
+    if db.get(SendingProfile, payload.profile_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "profile_id does not exist")
     group = db.get(Group, payload.group_id)
     if group is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "group_id does not exist")
     if not group.targets:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "group has no targets")
-    if payload.channel == "sms" and not any(t.phone for t in group.targets):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "SMS campaign needs targets with phone numbers")
     if payload.page_id is not None and db.get(LandingPage, payload.page_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "page_id does not exist")
 
@@ -111,10 +102,9 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
     scheduled = payload.launch_at is not None and payload.launch_at > utcnow()
     campaign = Campaign(
         name=payload.name,
-        channel=payload.channel,
+        channel="email",
         template_id=payload.template_id,
-        profile_id=payload.profile_id if payload.channel == "email" else None,
-        sms_profile_id=payload.sms_profile_id if payload.channel == "sms" else None,
+        profile_id=payload.profile_id,
         group_id=payload.group_id,
         page_id=payload.page_id,
         phish_url=str(payload.phish_url),

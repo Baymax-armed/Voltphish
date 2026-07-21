@@ -341,7 +341,6 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Channel</th>
                   <th>Status</th>
                   <th>Created</th>
                 </tr>
@@ -352,7 +351,6 @@ export default function Dashboard() {
                     <td>
                       <Link to={`/campaigns/${cp.id}`}>{cp.name}</Link>
                     </td>
-                    <td>{cp.channel === "sms" ? "📱 SMS" : "📧 Email"}</td>
                     <td>
                       <Badge status={cp.status} />
                     </td>

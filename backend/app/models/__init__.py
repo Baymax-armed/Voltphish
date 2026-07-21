@@ -11,7 +11,6 @@ from .profile import SendingProfile
 from .reported_email import ReportedEmail, ReportStatus
 from .result import Result, ResultStatus
 from .setting import Setting
-from .sms_profile import SmsProfile
 from .template import Template
 from .training import (
     Difficulty,
@@ -44,7 +43,6 @@ __all__ = [
     "Webhook",
     "ApiKey",
     "Attachment",
-    "SmsProfile",
     "Setting",
     "ReportedEmail",
     "ReportStatus",

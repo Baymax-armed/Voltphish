@@ -166,7 +166,7 @@ export interface Attachment {
 export interface Template {
   id: number;
   name: string;
-  channel: "email" | "sms";
+  channel: "email";
   subject: string;
   envelope_sender: string | null;
   html: string | null;
@@ -198,20 +198,6 @@ export interface AttackSurface {
   people: AttackSurfacePerson[];
   vip_count: number;
   vip_failed: number;
-}
-
-export type SmsProviderKind = "console" | "textbelt" | "twilio" | "generic";
-
-export interface SmsProfile {
-  id: number;
-  name: string;
-  provider: SmsProviderKind;
-  from_number: string | null;
-  account: string | null;
-  config: string | null;
-  has_secret: boolean;
-  created_at: string;
-  modified_at: string;
 }
 
 export interface GroupSummary {
@@ -462,10 +448,9 @@ export interface Campaign {
   id: number;
   name: string;
   status: CampaignStatus;
-  channel: "email" | "sms";
+  channel: "email";
   template_id: number;
   profile_id: number | null;
-  sms_profile_id: number | null;
   group_id: number;
   page_id: number | null;
   phish_url: string;

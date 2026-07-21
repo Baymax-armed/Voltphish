@@ -32,7 +32,6 @@ from .routers import (
     profiles,
     reported,
     settings as settings_router,
-    sms_profiles,
     templates,
     testmail,
     train,
@@ -96,7 +95,6 @@ app.include_router(auth.router)
 app.include_router(templates.router)
 app.include_router(groups.router)
 app.include_router(profiles.router)
-app.include_router(sms_profiles.router)
 app.include_router(pages.router)
 app.include_router(campaigns.router)
 app.include_router(testmail.router)

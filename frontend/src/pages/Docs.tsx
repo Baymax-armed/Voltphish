@@ -74,13 +74,6 @@ bob@example.com, Bob, Lee, Sales`}</pre>
         Whichever you use, <strong>Verify</strong> and <strong>Send test</strong> exercise the real service, so you
         can confirm credentials before launching a campaign.
       </p>
-      <h3>📱 SMS (smishing)</h3>
-      <p>
-        Under <strong>SMS Profiles</strong>, <strong>TextBelt</strong> is free and needs no signup — create a profile
-        with a blank key and it sends real SMS immediately (1/day on the free tier). For volume, plug an Indian gateway
-        (Fast2SMS / MSG91 / Gupshup) into the <strong>Generic</strong> provider. SMS templates use a short{" "}
-        <code>{`{{.URL}}`}</code> tracking link; opens can't be tracked in SMS, only clicks.
-      </p>
       <h3>"Sent" vs "delivered"</h3>
       <p>
         A recipient marked <strong>sent</strong> means the mail server/provider <em>accepted</em> the message. Final

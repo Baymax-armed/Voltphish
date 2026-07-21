@@ -6,14 +6,14 @@
 
   <h1>VoltPhish</h1>
   <p><strong>The modern, open-source phishing-simulation & human-risk platform.</strong><br/>
-  Run realistic attack simulations across email, SMS & QR — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
+  Run realistic email & QR attack simulations — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
     <img alt="Backend" src="https://img.shields.io/badge/backend-FastAPI-009688" />
     <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%2018%20%2B%20TS-61dafb" />
     <img alt="Deploy" src="https://img.shields.io/badge/deploy-Docker%20(1%20command)-2496ed" />
-    <img alt="Channels" src="https://img.shields.io/badge/channels-email%20%C2%B7%20SMS%20%C2%B7%20QR%20%C2%B7%20calendar-6f42c1" />
+    <img alt="Vectors" src="https://img.shields.io/badge/vectors-email%20%C2%B7%20QR%20%C2%B7%20calendar%20%C2%B7%20attachment-6f42c1" />
   </p>
 </div>
 
@@ -25,7 +25,7 @@
 
 Most open-source phishing tools stop at **"who clicked."** VoltPhish runs the whole program a real awareness team needs — **attack → report → teach → measure** — as a full-stack app (React admin + FastAPI backend + tracking server) in **one process, one container**, secure-by-default.
 
-It's built for the people who *run* awareness programs, not just red teams: multi-channel lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for KnowBe4 or Proofpoint.
+It's built for the people who *run* awareness programs, not just red teams: multi-vector lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for KnowBe4 or Proofpoint.
 
 ## 🚀 Quickstart — one command
 
@@ -45,9 +45,8 @@ Data (SQLite + outbox) persists in the `phishsim-data` volume. Use `docker compo
 
 ## ✨ Features
 
-### 🎣 Attack simulations — multi-channel
+### 🎣 Attack simulations — multi-vector
 - **📧 Email phishing** — WYSIWYG templates with `{{.FirstName}}` / `{{.URL}}` personalization, a ready-made **gallery** (IT, Microsoft 365, Google, HR, courier, MFA…), `.eml` import, and attachments with **open-tracking**.
-- **📱 SMS / smishing** — send simulated texts via Twilio, Textbelt, a generic HTTP provider, or a console backend for testing.
 - **🔲 QR / quishing** — per-recipient QR codes that open the tracking link; rendered server-side so they survive Outlook/Gmail.
 - **📅 Calendar (.ics) lures** — meeting-invite attachments with a tracked "join" link — a vector most tools ignore.
 - **🖱️ ClickFix "verify you're human"** & **🪟 Browser-in-the-Browser** — modern 2025-era landing pages (fake CAPTCHA, spoofed SSO popup).
@@ -89,7 +88,6 @@ VoltPhish's only actively-maintained open-source peer is **Gophish** (no release
 | Capability | **VoltPhish** | Gophish | Commercial SAT |
 |---|:---:|:---:|:---:|
 | Email simulation + tracking | ✅ | ✅ | ✅ |
-| SMS / smishing | ✅ | ❌ | ✅ |
 | QR / quishing | ✅ | ❌ | ✅ |
 | Calendar (.ics) lures | ✅ | ❌ | ~ |
 | AI content generation | ✅ | ❌ | ~ (mostly curation) |

@@ -77,7 +77,6 @@ export default function CampaignDetail() {
           </div>
           <h1 style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {c.name} <Badge status={c.status} />
-            <span className="badge draft">{c.channel === "sms" ? "📱 SMS" : "📧 Email"}</span>
           </h1>
         </div>
         <div className="btn-row" style={{ alignItems: "center" }}>
@@ -135,7 +134,7 @@ export default function CampaignDetail() {
           <table>
             <thead>
               <tr>
-                <th>{c.channel === "sms" ? "Phone" : "Email"}</th>
+                <th>Email</th>
                 <th>Name</th>
                 <th>Status</th>
                 <th>Sent</th>
@@ -147,15 +146,8 @@ export default function CampaignDetail() {
                 <tr key={r.id}>
                   <td className="mono">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      {c.channel === "sms" ? r.phone || "—" : r.email}
-                      <CopyButton
-                        label="Link"
-                        text={
-                          c.channel === "sms" && r.short_code
-                            ? `${window.location.origin}/s/${r.short_code}`
-                            : `${window.location.origin}/c/${r.rid}`
-                        }
-                      />
+                      {r.email}
+                      <CopyButton label="Link" text={`${window.location.origin}/c/${r.rid}`} />
                     </span>
                   </td>
                   <td>{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</td>

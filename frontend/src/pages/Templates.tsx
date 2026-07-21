@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { Attachment, Profile, Template } from "../types";
-import { Badge, BulkBar, Empty, FormSkeleton, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
+import { BulkBar, Empty, FormSkeleton, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
 import { confirmDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
 import HtmlEditor from "../components/HtmlEditor";
@@ -85,7 +85,7 @@ export default function Templates() {
       try {
         await api.createTemplate({
           name,
-          channel: t.channel === "sms" ? "sms" : "email",
+          channel: "email",
           subject: (t.subject as string) || "",
           envelope_sender: (t.envelope_sender as string) || null,
           html: (t.html as string) || null,
@@ -232,21 +232,16 @@ export default function Templates() {
                     <input type="checkbox" aria-label={`Select ${t.name}`} checked={sel.has(t.id)} onChange={() => toggle(t.id)} />
                   </td>
                   <td>
-                    <strong>{t.name}</strong>{" "}
-                    {t.channel === "sms" && <Badge status="scheduled" />}
+                    <strong>{t.name}</strong>
                   </td>
-                  <td>{t.channel === "sms" ? <span className="hint">SMS message</span> : t.subject}</td>
-                  <td>
-                    {t.channel === "sms"
-                      ? "SMS"
-                      : [t.html && "HTML", t.text && "Text"].filter(Boolean).join(" + ")}
-                  </td>
+                  <td>{t.subject}</td>
+                  <td>{[t.html && "HTML", t.text && "Text"].filter(Boolean).join(" + ")}</td>
                   <td>{fmtDate(t.modified_at)}</td>
                   <td className="actions-col">
                     <RowMenu
                       items={[
                         { label: "Edit", icon: "✎", onClick: () => setEditing(t) },
-                        ...(t.channel === "email" ? [{ label: "Send test", icon: "✈", onClick: () => setTesting(t) }] : []),
+                        { label: "Send test", icon: "✈", onClick: () => setTesting(t) },
                         { label: "Clone", icon: "⧉", onClick: () => clone(t) },
                         { label: "Delete", icon: "🗑", danger: true, onClick: () => remove(t) },
                       ]}
@@ -370,13 +365,11 @@ function TemplateForm({
   onSaved: () => void;
 }) {
   const { notify } = useToast();
-  const [channel] = useState<"email" | "sms">(template?.channel ?? "email");
   const [name, setName] = useState(template?.name ?? "");
   const [subject, setSubject] = useState(template?.subject ?? "");
   const [sender, setSender] = useState(template?.envelope_sender ?? "");
   const [html, setHtml] = useState(template?.html ?? SAMPLE);
   const [text, setText] = useState(template?.text ?? "");
-  const [smsBody, setSmsBody] = useState(template?.channel === "sms" ? template?.text ?? "" : "");
   const [busy, setBusy] = useState(false);
   const [bodyTab, setBodyTab] = useState<"html" | "text">("html");
   const [importOpen, setImportOpen] = useState(false);
@@ -483,10 +476,7 @@ function TemplateForm({
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const payload =
-      channel === "sms"
-        ? { name, channel, subject: "", html: null, text: smsBody }
-        : { name, channel, subject, envelope_sender: sender || null, html: html || null, text: text || null };
+    const payload = { name, channel: "email" as const, subject, envelope_sender: sender || null, html: html || null, text: text || null };
     try {
       if (template) await api.updateTemplate(template.id, payload);
       else await api.createTemplate(payload);
@@ -500,29 +490,25 @@ function TemplateForm({
 
   return (
     <Modal title={template ? "Edit template" : "New template"} onClose={onClose} wide>
-      {channel === "email" && (
-        <>
-          <div className="btn-row" style={{ justifyContent: "flex-end", marginBottom: 10 }}>
-            <button type="button" className="btn sm primary" onClick={() => setAiOpen(true)}>
-              ✨ Generate with AI
-            </button>
-            <button type="button" className="btn sm" onClick={() => setImportOpen((v) => !v)}>
-              {importOpen ? "Close import" : "⭱ Import from .eml"}
-            </button>
+      <div className="btn-row" style={{ justifyContent: "flex-end", marginBottom: 10 }}>
+        <button type="button" className="btn sm primary" onClick={() => setAiOpen(true)}>
+          ✨ Generate with AI
+        </button>
+        <button type="button" className="btn sm" onClick={() => setImportOpen((v) => !v)}>
+          {importOpen ? "Close import" : "⭱ Import from .eml"}
+        </button>
+      </div>
+      {importOpen && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="field">
+            <label>Paste a raw email (headers + body), then import</label>
+            <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={6}
+              placeholder={"From: it@example.com\nSubject: ...\nContent-Type: text/html\n\n<p>...</p>"} />
           </div>
-          {importOpen && (
-            <div className="card" style={{ marginBottom: 14 }}>
-              <div className="field">
-                <label>Paste a raw email (headers + body), then import</label>
-                <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={6}
-                  placeholder={"From: it@example.com\nSubject: ...\nContent-Type: text/html\n\n<p>...</p>"} />
-              </div>
-              <button type="button" className="btn primary sm" onClick={doImport} disabled={!raw.trim()}>
-                Import into form
-              </button>
-            </div>
-          )}
-        </>
+          <button type="button" className="btn primary sm" onClick={doImport} disabled={!raw.trim()}>
+            Import into form
+          </button>
+        </div>
       )}
       {aiOpen && <AiGenerateModal onApply={applyAi} onClose={() => setAiOpen(false)} />}
       <form onSubmit={save}>
@@ -531,61 +517,41 @@ function TemplateForm({
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
 
-        {channel === "sms" ? (
+        <div className="row2">
           <div className="field">
-            <label>
-              SMS message{" "}
-              <span className="hint">
-                {"tokens: {{.FirstName}} {{.URL}} — {{.URL}} becomes a short link"} ({smsBody.length} chars)
-              </span>
-            </label>
-            <textarea
-              value={smsBody}
-              onChange={(e) => setSmsBody(e.target.value)}
-              rows={4}
-              placeholder={"Hi {{.FirstName}}, verify your account: {{.URL}}"}
-              required
-            />
+            <label>Subject</label>
+            <input value={subject} onChange={(e) => setSubject(e.target.value)} required />
           </div>
-        ) : (
-          <>
-            <div className="row2">
-              <div className="field">
-                <label>Subject</label>
-                <input value={subject} onChange={(e) => setSubject(e.target.value)} required />
-              </div>
-              <div className="field">
-                <label>Envelope sender <span className="hint">(optional)</span></label>
-                <input type="email" placeholder="it-support@example.com" value={sender} onChange={(e) => setSender(e.target.value)} />
-              </div>
-            </div>
-            <div className="field">
-              <label>Email body</label>
-              <div className="tabs">
-                <button type="button" className={`tab ${bodyTab === "html" ? "active" : ""}`} onClick={() => setBodyTab("html")}>
-                  HTML
-                </button>
-                <button type="button" className={`tab ${bodyTab === "text" ? "active" : ""}`} onClick={() => setBodyTab("text")}>
-                  Plain Text
-                </button>
-              </div>
-              {bodyTab === "html" ? (
-                <HtmlEditor value={html} onChange={setHtml} />
-              ) : (
-                <>
-                  <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10}
-                    placeholder={"Hi {{.FirstName}}, verify your account: {{.URL}}"} />
-                  <span className="hint">
-                    Plain-text version (shown by clients that can't render HTML). Tokens work here too:{" "}
-                    {"{{.FirstName}} {{.URL}}"}.
-                  </span>
-                </>
-              )}
-            </div>
-          </>
-        )}
+          <div className="field">
+            <label>Envelope sender <span className="hint">(optional)</span></label>
+            <input type="email" placeholder="it-support@example.com" value={sender} onChange={(e) => setSender(e.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Email body</label>
+          <div className="tabs">
+            <button type="button" className={`tab ${bodyTab === "html" ? "active" : ""}`} onClick={() => setBodyTab("html")}>
+              HTML
+            </button>
+            <button type="button" className={`tab ${bodyTab === "text" ? "active" : ""}`} onClick={() => setBodyTab("text")}>
+              Plain Text
+            </button>
+          </div>
+          {bodyTab === "html" ? (
+            <HtmlEditor value={html} onChange={setHtml} />
+          ) : (
+            <>
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10}
+                placeholder={"Hi {{.FirstName}}, verify your account: {{.URL}}"} />
+              <span className="hint">
+                Plain-text version (shown by clients that can't render HTML). Tokens work here too:{" "}
+                {"{{.FirstName}} {{.URL}}"}.
+              </span>
+            </>
+          )}
+        </div>
 
-        {channel === "email" && (
+        {(
         <div className="field">
           <label>Attachments <span className="hint">(lure documents; max 5 MB each, benign types only)</span></label>
           {!template ? (

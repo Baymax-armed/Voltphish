@@ -39,12 +39,17 @@ export function DialogHost() {
   const [value, setValue] = useState("");
   const [err, setErr] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // See Modal in ui.tsx: guard the backdrop against the opening gesture's echo
+  // so a fast double-click can't open-then-immediately-cancel the dialog.
+  const openedAt = useRef(0);
+  const pressedBack = useRef(false);
 
   useEffect(() => {
     show = (s) => {
       setState(s);
       setValue(s.kind === "prompt" ? s.defaultValue ?? "" : "");
       setErr("");
+      openedAt.current = performance.now();
     };
     return () => {
       show = null;
@@ -68,6 +73,11 @@ export function DialogHost() {
     resolveFn = null;
   };
   const cancel = () => finish(state.kind === "confirm" ? false : null);
+  const onBackClick = (e: React.MouseEvent) => {
+    if (e.target !== e.currentTarget || !pressedBack.current) return;
+    if (performance.now() - openedAt.current < 400) return; // ignore the opening double-click's echo
+    cancel();
+  };
   const accept = () => {
     if (state.kind === "prompt") {
       const min = state.minLength ?? 0;
@@ -93,7 +103,12 @@ export function DialogHost() {
   const danger = state.kind === "confirm" && state.danger;
 
   return createPortal(
-    <div className="modal-back" onClick={cancel} onKeyDown={onKey}>
+    <div
+      className="modal-back"
+      onMouseDown={(e) => { pressedBack.current = e.target === e.currentTarget; }}
+      onClick={onBackClick}
+      onKeyDown={onKey}
+    >
       <div className="dialog" onClick={(e) => e.stopPropagation()} role="alertdialog" aria-modal="true">
         <h3 className="dialog-title">{state.title ?? (state.kind === "confirm" ? "Please confirm" : "Enter a value")}</h3>
         <p className="dialog-msg">{state.message}</p>

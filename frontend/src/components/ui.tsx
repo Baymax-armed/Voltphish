@@ -141,7 +141,17 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
 }) {
+  // When the modal opens, the backdrop instantly covers the whole viewport —
+  // including the button that opened it. A fast second click (a habitual
+  // double-click) would otherwise land on the backdrop and dismiss the modal,
+  // so it looks like the button "did nothing". Ignore backdrop clicks for a
+  // short grace window after opening, and only when the press both began and
+  // ended on the backdrop itself (so a drag-select ending outside won't close).
+  const openedAt = useRef(0);
+  const pressedBack = useRef(false);
+
   useEffect(() => {
+    openedAt.current = performance.now();
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", h);
     // Lock body scroll while a modal is open.
@@ -152,10 +162,20 @@ export function Modal({
     };
   }, [onClose]);
 
+  const onBackClick = (e: React.MouseEvent) => {
+    if (e.target !== e.currentTarget || !pressedBack.current) return;
+    if (performance.now() - openedAt.current < 400) return; // ignore the opening double-click's echo
+    onClose();
+  };
+
   // Portal to <body> so the backdrop always covers the whole viewport,
   // regardless of where in the tree the modal is rendered.
   return createPortal(
-    <div className="modal-back" onClick={onClose}>
+    <div
+      className="modal-back"
+      onMouseDown={(e) => { pressedBack.current = e.target === e.currentTarget; }}
+      onClick={onBackClick}
+    >
       <div className={`modal${wide ? " lg" : ""}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>{title}</h2>

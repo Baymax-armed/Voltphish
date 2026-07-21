@@ -2,10 +2,10 @@ import { useId } from "react";
 import type { TimelinePoint } from "../types";
 
 const SERIES = [
-  { key: "sent", label: "Sent", color: "#34d399" },
-  { key: "opened", label: "Opened", color: "#38bdf8" },
-  { key: "clicked", label: "Clicked", color: "#a78bfa" },
-  { key: "submitted", label: "Submitted", color: "#f87171" },
+  { key: "sent", label: "Sent", color: "var(--ev-sent)" },
+  { key: "opened", label: "Opened", color: "var(--ev-opened)" },
+  { key: "clicked", label: "Clicked", color: "var(--ev-clicked)" },
+  { key: "submitted", label: "Submitted", color: "var(--ev-submitted)" },
 ] as const;
 
 function shortDate(iso: string): string {

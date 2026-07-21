@@ -45,11 +45,11 @@ export default function Dashboard() {
   const c = data.campaigns;
 
   const funnelSteps = [
-    { label: "Email sent", value: f.sent, color: "var(--good)" },
-    { label: "Opened", value: f.opened, color: "var(--accent)" },
-    { label: "Clicked link", value: f.clicked, color: "var(--violet)" },
-    { label: "Submitted data", value: f.submitted, color: "var(--bad)" },
-    { label: "Reported", value: f.reported, color: "#22c55e" },
+    { label: "Email sent", value: f.sent, color: "var(--ev-sent)" },
+    { label: "Opened", value: f.opened, color: "var(--ev-opened)" },
+    { label: "Clicked link", value: f.clicked, color: "var(--ev-clicked)" },
+    { label: "Submitted data", value: f.submitted, color: "var(--ev-submitted)" },
+    { label: "Reported", value: f.reported, color: "var(--ev-reported)" },
   ];
 
   const statusSegs = [
@@ -95,24 +95,34 @@ export default function Dashboard() {
       <div className="card animate-in" style={{ marginBottom: 20, animationDelay: "0.12s" }}>
         <h2 style={{ margin: "0 0 4px", fontSize: 15 }}>Engagement funnel</h2>
         <div className="page-sub" style={{ marginBottom: 18 }}>{f.recipients} total recipients</div>
-        <div className="funnel-bars">
-          {funnelSteps.map((s, i) => (
-            <FunnelBar key={s.label} {...s} total={f.recipients} delay={i * 0.1} />
-          ))}
-        </div>
+        {f.recipients === 0 ? (
+          <div className="hint" style={{ padding: "26px 0", textAlign: "center" }}>
+            No recipients yet — launch a campaign and the delivery→engagement funnel appears here.
+          </div>
+        ) : (
+          <div className="funnel-bars">
+            {funnelSteps.map((s, i) => (
+              <FunnelBar key={s.label} {...s} total={f.recipients} delay={i * 0.1} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid cols-3" style={{ marginBottom: 20 }}>
         {/* Donut rings */}
         <div className="card animate-in" style={{ gridColumn: "span 2", animationDelay: "0.15s" }}>
           <h2 style={{ margin: "0 0 16px", fontSize: 15 }}>Success overview</h2>
-          <div className="grid cols-5">
-            <Donut value={f.sent} total={f.recipients} label="Sent" color="var(--good)" size={92} />
-            <Donut value={f.opened} total={f.recipients} label="Opened" color="var(--accent)" size={92} />
-            <Donut value={f.clicked} total={f.recipients} label="Clicked" color="var(--violet)" size={92} />
-            <Donut value={f.submitted} total={f.recipients} label="Submitted" color="var(--bad)" size={92} />
-            <Donut value={f.reported} total={f.recipients} label="Reported" color="#22c55e" size={92} />
-          </div>
+          {f.recipients === 0 ? (
+            <div className="hint" style={{ padding: "26px 0", textAlign: "center" }}>Not enough data yet.</div>
+          ) : (
+            <div className="grid cols-5">
+              <Donut value={f.sent} total={f.recipients} label="Sent" color="var(--ev-sent)" size={92} />
+              <Donut value={f.opened} total={f.recipients} label="Opened" color="var(--ev-opened)" size={92} />
+              <Donut value={f.clicked} total={f.recipients} label="Clicked" color="var(--ev-clicked)" size={92} />
+              <Donut value={f.submitted} total={f.recipients} label="Submitted" color="var(--ev-submitted)" size={92} />
+              <Donut value={f.reported} total={f.recipients} label="Reported" color="var(--ev-reported)" size={92} />
+            </div>
+          )}
         </div>
 
         {/* Campaign status breakdown */}

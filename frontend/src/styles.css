@@ -42,6 +42,20 @@
   --risk-critical: #f43f5e;
   --vip: #f59e0b;               /* high-value target (★) */
 
+  /* Engagement-funnel series — one palette reused by every chart (funnel bars,
+     donuts, activity trend). Hues chosen to stay distinguishable for the common
+     color-vision deficiencies, and always paired with a text label (never color
+     alone). 'sent' is sky (delivered, neutral) so it no longer clashes with the
+     green 'reported'. */
+  --ev-sent: #38bdf8;
+  --ev-opened: var(--accent);
+  --ev-clicked: var(--violet);
+  --ev-submitted: var(--bad);
+  --ev-reported: var(--good);
+  /* Categorical palette for any other multi-series chart. */
+  --chart-1: #38bdf8; --chart-2: var(--accent); --chart-3: var(--violet);
+  --chart-4: #f59e0b; --chart-5: var(--good); --chart-6: var(--bad);
+
   /* Type scale (px, matched to the existing UI so nothing shifts). */
   --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-base: 14px; --fs-md: 15px;
   --fs-lg: 18px; --fs-xl: 23px; --fs-2xl: 30px;
@@ -79,6 +93,9 @@
   --info: #0284c7;
   --risk-critical: #be123c;
   --vip: #b45309;
+  /* Slightly deeper chart hues so fills/strokes hold contrast on light surfaces. */
+  --ev-sent: #0284c7;
+  --chart-1: #0284c7; --chart-4: #b45309;
 }
 
 * { box-sizing: border-box; }

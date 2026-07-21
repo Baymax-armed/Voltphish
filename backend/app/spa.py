@@ -45,10 +45,15 @@ def mount_spa(app: FastAPI) -> None:
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
 
+    # Path prefixes owned by the API / tracking / add-in servers — never the SPA.
+    # NOTE: use a trailing "/" (or an exact match) so a prefix like "report"
+    # doesn't also swallow SPA routes such as "reported".
+    _reserved = ("api/", "t/", "c/", "p/", "q/", "a/", "r/", "s/", "learn/", "report/", "addins/", "train/", "assets/")
+
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str, request: Request):
         # Never shadow the API or the tracking server.
-        if full_path.startswith(("api/", "t/", "c/", "p/", "q/", "a/", "r/", "s/", "learn/", "report", "assets/")):
+        if full_path == "report" or full_path.startswith(_reserved):
             return JSONResponse(status_code=404, content={"detail": "Not found"})
         # Serve a real file if one exists (favicon, etc.), else the SPA shell.
         candidate = dist / full_path

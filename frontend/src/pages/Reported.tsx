@@ -161,6 +161,7 @@ function AddinSetup() {
   const { notify } = useToast();
   const [cfg, setCfg] = useState<AddinConfig | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<"outlook" | "gmail">("outlook");
 
   useEffect(() => {
     api.addinConfig().then(setCfg).catch(() => setCfg(null));
@@ -189,46 +190,75 @@ function AddinSetup() {
   if (!cfg) return null;
   const origin = window.location.origin;
   const manifest = origin + cfg.manifest_url;
+  const codeGs = origin + cfg.gmail_script_url;
+  const appsJson = origin + "/addins/gmail/appsscript.json";
+
+  const copyBtn = (text: string, what: string) => (
+    <button type="button" className="btn sm" onClick={() => copy(text, what)}>Copy</button>
+  );
+  const linkBtn = (href: string, label: string) => (
+    <a className="btn sm" href={href} target="_blank" rel="noopener noreferrer">{label}</a>
+  );
 
   return (
     <div className="card">
       <h2 style={{ margin: "0 0 4px", fontSize: 16 }}>🔘 Install the Report-Phish button</h2>
-      <p className="hint" style={{ marginBottom: 16 }}>
+      <p className="hint" style={{ marginBottom: 14 }}>
         Give employees a one-click button to report suspicious mail. Reports of your own simulations credit them as
-        Security Champions automatically; real suspicious mail lands in the triage queue below.
+        Security Champions automatically; real suspicious mail lands in the triage queue below. Follow the steps for
+        your mail platform:
       </p>
 
-      <div className="row2">
-        <div className="field">
-          <label>Outlook — deploy this manifest URL</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <input readOnly value={manifest} className="mono" style={{ flex: 1 }} />
-            <button type="button" className="btn" onClick={() => copy(manifest, "Manifest URL")}>Copy</button>
-          </div>
-          <span className="hint" style={{ marginTop: 4 }}>
-            Microsoft 365 admin center → Settings → Integrated apps → Upload custom app → “Provide link to manifest”.
-            Or sideload it from Outlook → Get Add-ins → My add-ins → Custom Addins.
-          </span>
-        </div>
-        <div className="field">
-          <label>Gmail — Apps Script</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <a className="btn" href={origin + cfg.gmail_script_url} target="_blank" rel="noopener noreferrer">
-              Open Code.gs
-            </a>
-            <a className="btn" href={origin + "/addins/gmail/appsscript.json"} target="_blank" rel="noopener noreferrer">
-              appsscript.json
-            </a>
-          </div>
-          <span className="hint" style={{ marginTop: 4 }}>
-            script.google.com → new project → paste both files → Deploy → Test deployments → Install.
-          </span>
-        </div>
+      <div className="tabs" style={{ marginBottom: 4 }}>
+        <button type="button" className={`tab ${tab === "outlook" ? "active" : ""}`} onClick={() => setTab("outlook")}>
+          Outlook / Microsoft 365
+        </button>
+        <button type="button" className={`tab ${tab === "gmail" ? "active" : ""}`} onClick={() => setTab("gmail")}>
+          Gmail / Google Workspace
+        </button>
       </div>
 
-      <div className="field">
+      {tab === "outlook" ? (
+        <div className="install">
+          <div className="hint" style={{ fontWeight: 700, color: "var(--text)", margin: "12px 0 6px" }}>
+            Roll out to everyone (recommended — needs a Microsoft 365 admin)
+          </div>
+          <ol className="steps">
+            <li>Copy the add-in manifest URL:
+              <div className="inline-copy"><input readOnly value={manifest} className="mono" />{copyBtn(manifest, "Manifest URL")}</div>
+            </li>
+            <li>Open the <strong>Microsoft 365 admin center</strong> → <strong>Settings → Integrated apps</strong> → <strong>Upload custom apps</strong>.</li>
+            <li>Choose <strong>“Provide link to manifest file (URL)”</strong> and paste the URL from step&nbsp;1.</li>
+            <li>Select the users / groups to give it to, then <strong>Deploy</strong>.</li>
+            <li>The <strong>Report Phish</strong> button appears in their Outlook (desktop &amp; web) — usually within a few hours (up to ~24h to fully propagate).</li>
+          </ol>
+          <div className="hint" style={{ fontWeight: 700, color: "var(--text)", margin: "16px 0 6px" }}>
+            Just test it yourself (no admin — sideload)
+          </div>
+          <ol className="steps">
+            <li>In Outlook, open <strong>Get Add-ins → My add-ins → Custom Addins → Add a custom add-in → Add from URL</strong>.</li>
+            <li>Paste the manifest URL above. The button shows up right away when you open a message.</li>
+          </ol>
+        </div>
+      ) : (
+        <div className="install">
+          <ol className="steps">
+            <li>Open <strong>Code.gs</strong> and copy everything in it:
+              <div className="inline-copy" style={{ gap: 6 }}>{linkBtn(codeGs, "Open Code.gs")}</div>
+            </li>
+            <li>Go to <strong>script.google.com</strong> → <strong>New project</strong>. Delete the sample code and paste the <code>Code.gs</code> contents.</li>
+            <li>Click <strong>Project Settings ⚙</strong> → tick <strong>“Show appsscript.json manifest file”</strong>. Open the <code>appsscript.json</code> tab, then open ours and paste its contents over it:
+              <div className="inline-copy" style={{ gap: 6 }}>{linkBtn(appsJson, "Open appsscript.json")}</div>
+            </li>
+            <li><strong>Deploy → Test deployments → Install</strong> (approve the permissions prompt).</li>
+            <li>Open any email in Gmail — the <strong>Report Phish</strong> card appears in the right-hand add-in panel.</li>
+          </ol>
+        </div>
+      )}
+
+      <div className="field" style={{ marginTop: 16 }}>
         <label>
-          Report token <span className="hint">— embedded in the add-in; regenerate to revoke</span>
+          Report token <span className="hint">— embedded in the add-in; regenerate to revoke old installs</span>
         </label>
         <div style={{ display: "flex", gap: 6 }}>
           <input readOnly value={cfg.token} type="password" className="mono" style={{ flex: 1 }} />
@@ -240,8 +270,8 @@ function AddinSetup() {
       </div>
 
       <div className="banner" style={{ marginTop: 8, marginBottom: 0 }}>
-        💡 The button posts to <span className="mono">{origin}/api/v1/inbound/report</span>. Make sure this host is
-        reachable (HTTPS) from your users' mail clients.
+        💡 The button posts to <span className="mono">{origin}/api/v1/inbound/report</span> — make sure this host is
+        reachable over <strong>HTTPS</strong> from your users' mail clients (a public/company URL, not <code>localhost</code>).
       </div>
     </div>
   );

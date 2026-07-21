@@ -5,8 +5,10 @@
   </picture>
 
   <h1>VoltPhish</h1>
-  <p><strong>The modern, open-source phishing-simulation & human-risk platform.</strong><br/>
-  Run realistic email & QR attack simulations — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
+  <p><strong>The open-source, self-hosted alternative to KnowBe4 &amp; Proofpoint.</strong><br/>
+  Run realistic email &amp; QR phishing simulations — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
+
+  <p><em>Gophish stopped at "who clicked" and hasn't shipped since 2022. VoltPhish runs the whole awareness program: <strong>attack → report → train → measure</strong>.</em></p>
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
@@ -18,6 +20,14 @@
 </div>
 
 > ⚠️ **Authorized use only.** VoltPhish is for testing organizations and people who have **consented** to being tested — your own company, a client engagement with signed scope, or a lab. Using it against anyone else is likely illegal. See [Responsible use](#-responsible-use).
+
+<!-- Add a demo GIF + screenshots here — it's the single biggest driver of stars.
+     Capture from the running app (see LAUNCH.md shot list), save to docs/screenshots/,
+     then embed:  ![VoltPhish dashboard](docs/screenshots/dashboard.png)  -->
+
+<div align="center">
+  <sub>⭐ If this is useful, <a href="https://github.com/Baymax-armed/Voltphish">star the repo</a> — it genuinely helps others find it.</sub>
+</div>
 
 ---
 

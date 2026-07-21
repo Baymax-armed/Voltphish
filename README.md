@@ -1,10 +1,7 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-light.png" />
-    <img src="frontend/public/logo.png" alt="VoltPhish" width="300" />
-  </picture>
+  <img src="docs/banner.png" alt="VoltPhish — open-source phishing simulation & security awareness" width="100%" />
 
-  <h1>VoltPhish</h1>
+  <h1>⚡ VoltPhish</h1>
   <p><strong>The open-source, self-hosted alternative to KnowBe4 &amp; Proofpoint.</strong><br/>
   Run realistic email &amp; QR phishing simulations — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
 
@@ -52,6 +49,13 @@ docker compose up --build
 3. Sign in, set a new password, and go. With the default **console** mail backend, launching a campaign writes each email as a `.eml` file to the data volume instead of sending — so you can walk the whole open → click → submit → teach flow with **zero real email**. Switch `VOLTPHISH_MAIL_BACKEND=smtp` and add a Sending Profile to deliver for real (against hosts you're authorized to test).
 
 Data (SQLite + outbox) persists in the `voltphish-data` volume. Use `docker compose up -d` to keep it — **not** `down -v`, which wipes the volume.
+
+## 📸 A look inside
+
+<div align="center">
+  <img src="docs/screenshots/login.png" alt="VoltPhish sign-in" width="82%" />
+  <br/><sub>More screenshots welcome — a demo GIF of a live campaign is on the way.</sub>
+</div>
 
 ## ✨ Features
 

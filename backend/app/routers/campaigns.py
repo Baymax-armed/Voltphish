@@ -162,7 +162,7 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         from ..services.tunnel import managed_available, spawn_campaign_tunnel
 
         if managed_available():
-            url = spawn_campaign_tunnel(campaign.id)
+            url = spawn_campaign_tunnel(campaign.id, ttl_minutes=payload.tunnel_ttl_minutes)
             if url:
                 campaign.phish_url = url
                 db.commit()

@@ -27,6 +27,9 @@ class CampaignCreate(BaseModel):
     # NG/tunnel: spawn a fresh dedicated public URL for THIS campaign (overrides
     # phish_url with the new …trycloudflare.com hostname when available).
     fresh_tunnel: bool = False
+    # How long the public link stays live (minutes); None/0 = until deleted.
+    # Bounded to 30 days.
+    tunnel_ttl_minutes: int | None = Field(default=None, ge=0, le=43200)
     redirect_url: AnyHttpUrl | None = None
     launch_at: datetime | None = None
     # Optional drip window end: messages are spread across [launch_at, send_by_at].

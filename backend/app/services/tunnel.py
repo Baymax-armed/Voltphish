@@ -81,15 +81,23 @@ def _read_hostname(port: int, timeout: float = 25.0) -> str | None:
 def _stop_locked(campaign_id: int) -> None:
     t = _tunnels.pop(campaign_id, None)
     if t:
+        timer = t.get("timer")
+        if timer is not None:
+            try:
+                timer.cancel()
+            except Exception:  # noqa: BLE001
+                pass
         try:
             t["proc"].terminate()
         except Exception:  # noqa: BLE001
             pass
 
 
-def spawn_campaign_tunnel(campaign_id: int) -> str | None:
+def spawn_campaign_tunnel(campaign_id: int, ttl_minutes: int | None = None) -> str | None:
     """Start a dedicated quick tunnel for a campaign and return its public URL,
-    or None if unavailable/failed. Reuses an existing one for the campaign."""
+    or None if unavailable/failed. Reuses an existing one for the campaign. If
+    ttl_minutes is set, the tunnel auto-shuts off after that long (bounding how
+    long the public link stays live)."""
     binpath = _cloudflared_bin()
     if not binpath:
         return None
@@ -119,9 +127,17 @@ def spawn_campaign_tunnel(campaign_id: int) -> str | None:
         return None
 
     url = f"https://{host}"
+    timer = None
+    if ttl_minutes and ttl_minutes > 0:
+        timer = threading.Timer(ttl_minutes * 60, lambda: stop_campaign_tunnel(campaign_id))
+        timer.daemon = True
+        timer.start()
     with _mlock:
-        _tunnels[campaign_id] = {"proc": proc, "url": url, "port": port}
-    log.info("spawned per-campaign tunnel for %s: %s", campaign_id, url)
+        _tunnels[campaign_id] = {"proc": proc, "url": url, "port": port, "timer": timer}
+    log.info(
+        "spawned per-campaign tunnel for %s: %s (ttl=%s min)",
+        campaign_id, url, ttl_minutes or "none",
+    )
     return url
 
 

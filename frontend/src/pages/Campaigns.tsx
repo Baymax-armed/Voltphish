@@ -185,6 +185,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
     send_by_at: "",
     send_jitter: prefill?.send_jitter ?? false,
     business_hours_only: prefill?.business_hours_only ?? false,
+    tunnel_ttl: 1440, // minutes the public link stays live (24h default; 0 = until deleted)
     auto_enroll_trigger: prefill?.auto_enroll_trigger ?? "off", // off | clicked | submitted
     auto_enroll_module_id: prefill?.auto_enroll_module_id ?? 0, // 0 => adaptive pick
     auto_enroll_email: prefill?.auto_enroll_email ?? true,
@@ -314,6 +315,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
         page_id: f.page_id || null,
         phish_url: f.phish_url,
         fresh_tunnel: urlMode === "tunnel" && !!tunnel?.managed,
+        tunnel_ttl_minutes: urlMode === "tunnel" && tunnel?.managed ? f.tunnel_ttl || null : null,
         redirect_url: f.redirect_url || null,
         launch_at: f.launch_at ? new Date(f.launch_at).toISOString() : null,
         send_by_at: f.send_by_at ? new Date(f.send_by_at).toISOString() : null,
@@ -464,6 +466,19 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                       <input style={{ marginTop: 8 }} value={f.phish_url} onChange={(e) => set("phish_url", e.target.value)} placeholder="https://your-public-host.example.com" required />
                     )}
                   </div>
+                  {urlMode === "tunnel" && tunnel?.managed && (
+                    <div className="field">
+                      <label>Keep the public link live for <span className="hint">then it auto-shuts off (quick tunnels have no fixed limit)</span></label>
+                      <select value={f.tunnel_ttl} onChange={(e) => set("tunnel_ttl", Number(e.target.value))}>
+                        <option value={60}>1 hour</option>
+                        <option value={360}>6 hours</option>
+                        <option value={1440}>24 hours</option>
+                        <option value={4320}>3 days</option>
+                        <option value={10080}>7 days</option>
+                        <option value={0}>Until I delete the campaign</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="row2">
                     <div className="field">
                       <label>Schedule for later <span className="hint">(leave empty = now)</span></label>
@@ -668,6 +683,19 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                       </span>
                     )}
                   </div>
+                  {urlMode === "tunnel" && tunnel?.managed && (
+                    <div className="field">
+                      <label>Keep the public link live for <span className="hint">then it auto-shuts off</span></label>
+                      <select value={f.tunnel_ttl} onChange={(e) => set("tunnel_ttl", Number(e.target.value))}>
+                        <option value={60}>1 hour</option>
+                        <option value={360}>6 hours</option>
+                        <option value={1440}>24 hours</option>
+                        <option value={4320}>3 days</option>
+                        <option value={10080}>7 days</option>
+                        <option value={0}>Until I delete the campaign</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="field">
                     <label>
                       Redirect URL <span className="hint">(optional) where a click ultimately lands — e.g. a teaching page</span>

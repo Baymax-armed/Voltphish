@@ -2,10 +2,10 @@
   <img src="docs/banner.png" alt="VoltPhish — open-source phishing simulation & security awareness" width="100%" />
 
   <h1>⚡ VoltPhish</h1>
-  <p><strong>The open-source, self-hosted alternative to KnowBe4 &amp; Proofpoint.</strong><br/>
+  <p><strong>The open-source, self-hosted alternative to enterprise (paid) phishing-simulation tools.</strong><br/>
   Run realistic email &amp; QR phishing simulations — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
 
-  <p><em>Gophish stopped at "who clicked" and hasn't shipped since 2022. VoltPhish runs the whole awareness program: <strong>attack → report → train → measure</strong>.</em></p>
+  <p><em>Most open-source tools stop at "who clicked" — and many are unmaintained. VoltPhish runs the whole awareness program: <strong>attack → report → train → measure</strong>.</em></p>
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
@@ -32,7 +32,7 @@
 
 Most open-source phishing tools stop at **"who clicked."** VoltPhish runs the whole program a real awareness team needs — **attack → report → teach → measure** — as a full-stack app (React admin + FastAPI backend + tracking server) in **one process, one container**, secure-by-default.
 
-It's built for the people who *run* awareness programs, not just red teams: multi-vector lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for KnowBe4 or Proofpoint.
+It's built for the people who *run* awareness programs, not just red teams: multi-vector lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for an enterprise (paid) platform.
 
 ## 🚀 Quickstart — one command
 
@@ -97,9 +97,9 @@ Data (SQLite + outbox) persists in the `voltphish-data` volume. Use `docker comp
 
 ## 🆚 How it compares
 
-VoltPhish's only actively-maintained open-source peer is **Gophish** (no release since 2022). Here's the honest picture against it and the commercial platforms (KnowBe4 / Proofpoint / Cofense):
+An honest picture against typical open-source tools (most are unmaintained) and paid enterprise platforms:
 
-| Capability | **VoltPhish** | Gophish | Commercial SAT |
+| Capability | **VoltPhish** | Typical OSS tool | Enterprise (paid) |
 |---|:---:|:---:|:---:|
 | Email simulation + tracking | ✅ | ✅ | ✅ |
 | QR / quishing | ✅ | ❌ | ✅ |
@@ -117,7 +117,7 @@ VoltPhish's only actively-maintained open-source peer is **Gophish** (no release
 | Granular RBAC / delegated admin | ✅ | ❌ | ✅ |
 | Deliverability check + allowlist gen | ✅ | ❌ | ✅ |
 | Self-hosted & free | ✅ | ✅ | ❌ |
-| Actively maintained | ✅ | ❌ (2022) | ✅ |
+| Actively maintained | ✅ | ⚠️ often stale | ✅ |
 
 ## 🧩 Tech stack
 

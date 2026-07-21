@@ -9,9 +9,9 @@ backfires. Real traction comes from the right communities + good screenshots.
 ## 0. Do these first (10 min, biggest impact)
 
 1. **Repo "About" (gear icon on the repo page):**
-   - **Description:** `Open-source, self-hosted phishing simulation & security-awareness platform — the free alternative to KnowBe4/Proofpoint. Email · QR · training LMS · report button · human-risk analytics. One Docker command.`
+   - **Description:** `Open-source, self-hosted phishing simulation & security-awareness platform — the free alternative to paid enterprise tools. Email · QR · training LMS · report button · human-risk analytics. One Docker command.`
    - **Website:** (your live demo or the artifact landing page link)
-   - **Topics:** `phishing` `phishing-simulation` `security-awareness` `security-awareness-training` `cybersecurity` `blue-team` `self-hosted` `gophish-alternative` `knowbe4-alternative` `fastapi` `react` `docker` `infosec` `soc` `open-source`
+   - **Topics:** `phishing` `phishing-simulation` `security-awareness` `security-awareness-training` `cybersecurity` `blue-team` `self-hosted` `fastapi` `react` `docker` `infosec` `soc` `open-source`
 
 2. **Add screenshots / a demo GIF to the top of the README** (see shot list below). A repo
    with a demo GIF gets *dramatically* more stars than one without. This is the #1 lever.
@@ -43,8 +43,8 @@ Save under `docs/screenshots/` and reference them in the README.
 > **First comment (post immediately after):**
 >
 > Hi HN. VoltPhish is a self-hosted phishing-simulation & security-awareness tool — think
-> an open-source take on KnowBe4/Proofpoint, or Gophish with the whole awareness loop built
-> in (Gophish hasn't shipped a release since 2022).
+> an open-source take on the paid enterprise tools — with the whole awareness loop built
+> in (most open-source options are unmaintained).
 >
 > It runs as one Docker container (React admin + FastAPI backend + tracking server). Beyond
 > "who clicked," it does the parts a real awareness program needs: a one-click Report-Phish
@@ -66,7 +66,7 @@ Save under `docs/screenshots/` and reference them in the README.
 
 ## 3. r/selfhosted
 
-> **Title:** I built VoltPhish — a self-hosted, open-source phishing-simulation & security-awareness platform (KnowBe4/Gophish alternative)
+> **Title:** I built VoltPhish — a self-hosted, open-source phishing-simulation & security-awareness platform (self-hosted, open-source)
 >
 > **Body:**
 > Ran one `docker compose up` and you get a full security-awareness platform: send simulated
@@ -87,11 +87,11 @@ Save under `docs/screenshots/` and reference them in the README.
 
 ## 4. r/cybersecurity / r/blueteam / r/AskNetsec
 
-> **Title:** Open-source alternative to KnowBe4 for phishing simulation + awareness training (self-hosted)
+> **Title:** Open-source alternative to paid phishing-simulation tools + awareness training (self-hosted)
 >
 > **Body:**
 > Built VoltPhish for teams that want to run phishing sims + awareness training without paying
-> per-seat for KnowBe4/Proofpoint. It closes the loop: attack → report → train → measure.
+> per-seat for enterprise (paid) tools. It closes the loop: attack → report → train → measure.
 > Native Outlook/Gmail Report-Phish button, just-in-time training auto-enrollment, human-risk
 > scoring, VAP-style attack surface, deliverability allowlist generator, SSO + admin 2FA + RBAC.
 >
@@ -102,7 +102,7 @@ Save under `docs/screenshots/` and reference them in the README.
 
 ## 5. Product Hunt
 
-> **Tagline:** The open-source, self-hosted alternative to KnowBe4
+> **Tagline:** The open-source, self-hosted alternative to paid enterprise tools
 > **Description:** VoltPhish is a phishing-simulation & security-awareness platform you run in
 > one Docker container. Email/QR/calendar lures, a one-click Report-Phish button, a training
 > LMS that auto-enrolls anyone who fails, and human-risk analytics — all self-hosted, MIT-licensed.
@@ -113,7 +113,7 @@ Save under `docs/screenshots/` and reference them in the README.
 ## 6. X / Twitter thread
 
 > 1/ I built VoltPhish — an open-source, self-hosted phishing-simulation & security-awareness
-> platform. The free alternative to KnowBe4/Proofpoint. One `docker compose up`. 🧵👇 [GIF]
+> platform. The free alternative to paid enterprise tools. One `docker compose up`. 🧵👇 [GIF]
 >
 > 2/ Most OSS phishing tools stop at "who clicked." VoltPhish runs the whole program:
 > attack → report → train → measure.
@@ -142,8 +142,8 @@ Save under `docs/screenshots/` and reference them in the README.
 > button, auto-enroll anyone who fails into short training, and measure human risk — all in
 > one Docker container, with your data staying on your own infrastructure.
 >
-> MIT-licensed and free. Built for security teams who want KnowBe4-style outcomes without the
-> KnowBe4 bill. Feedback from security & awareness folks very welcome 👇
+> MIT-licensed and free. Built for security teams who want enterprise-grade outcomes without the
+> enterprise bill. Feedback from security & awareness folks very welcome 👇
 > https://github.com/Baymax-armed/Voltphish
 >
 > #cybersecurity #infosec #securityawareness #opensource
@@ -155,7 +155,7 @@ Save under `docs/screenshots/` and reference them in the README.
 - **awesome-selfhosted** — open a PR adding VoltPhish under "Security".
 - **awesome-security / awesome-cybersecurity-blueteam** lists — PRs.
 - **r/msp, r/sysadmin** — the MSP/IT-admin angle.
-- **Hacker News "Show HN" + a dev.to / Hashnode writeup** ("Why I built an open-source KnowBe4 alternative").
+- **Hacker News "Show HN" + a dev.to / Hashnode writeup** ("Why I built an open-source, self-hosted awareness platform").
 - **Mastodon (infosec.exchange)** — the security community is active there.
 
 Post 2–3 of these on day one, space the rest over the week, and reply to every comment.

@@ -349,7 +349,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                 <button
                   type="button"
                   key={g.id}
-                  className={`btn sm ${groupIds.includes(g.id) ? "primary" : ""}`}
+                  className={`chip ${groupIds.includes(g.id) ? "on" : ""}`}
+                  aria-pressed={groupIds.includes(g.id)}
                   onClick={() => toggleGroup("inc", g.id)}
                 >
                   {groupIds.includes(g.id) ? "✓ " : ""}{g.name} ({g.target_count})
@@ -367,7 +368,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                   <button
                     type="button"
                     key={g.id}
-                    className={`btn sm ${excludeIds.includes(g.id) ? "danger" : ""}`}
+                    className={`chip ${excludeIds.includes(g.id) ? "on exclude" : ""}`}
+                    aria-pressed={excludeIds.includes(g.id)}
                     onClick={() => toggleGroup("exc", g.id)}
                     disabled={groupIds.includes(g.id) && groupIds.length === 1}
                     title={groupIds.includes(g.id) && groupIds.length === 1 ? "Can't exclude your only target group" : ""}

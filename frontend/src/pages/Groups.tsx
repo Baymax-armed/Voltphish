@@ -372,7 +372,7 @@ function GroupForm({
                           type="button"
                           className="linklike"
                           title={t.is_vip ? "VIP — click to unset" : "Mark as high-value target"}
-                          style={{ fontSize: 16, color: t.is_vip ? "#f59e0b" : "var(--text-dim)" }}
+                          style={{ fontSize: 16, color: t.is_vip ? "var(--vip)" : "var(--text-dim)" }}
                           onClick={() => setTargets(targets.map((x, j) => (j === i ? { ...x, is_vip: !x.is_vip } : x)))}
                         >
                           {t.is_vip ? "★" : "☆"}

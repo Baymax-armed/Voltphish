@@ -6,12 +6,7 @@ import { Empty, ListSkeleton, fmtDate } from "../components/ui";
 type SortKey = "risk" | "targeted" | "opened" | "clicked" | "submitted" | "reported" | "trainings_completed" | "last_activity";
 
 const RISK_RANK: Record<Person["risk"], number> = { high: 0, medium: 1, low: 2 };
-
-const RISK_STYLE: Record<Person["risk"], { bg: string; fg: string; label: string }> = {
-  high: { bg: "rgba(220,38,38,.16)", fg: "#f87171", label: "High" },
-  medium: { bg: "rgba(234,179,8,.16)", fg: "#eab308", label: "Medium" },
-  low: { bg: "rgba(34,197,94,.16)", fg: "#4ade80", label: "Low" },
-};
+const RISK_TIERS: Person["risk"][] = ["high", "medium", "low"];
 
 export default function People() {
   const [people, setPeople] = useState<Person[] | null>(null);
@@ -91,11 +86,9 @@ export default function People() {
       ) : (
         <>
           <div className="grid cols-3" style={{ marginBottom: 18 }}>
-            {(["high", "medium", "low"] as const).map((r) => (
+            {RISK_TIERS.map((r) => (
               <div className="card" key={r} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span className="pill" style={{ background: RISK_STYLE[r].bg, color: RISK_STYLE[r].fg }}>
-                  {RISK_STYLE[r].label} risk
-                </span>
+                <span className={`risk ${r}`}>{r} risk</span>
                 <strong style={{ fontSize: 22, fontVariantNumeric: "tabular-nums" }}>{counts[r]}</strong>
                 <span className="page-sub">{counts[r] === 1 ? "person" : "people"}</span>
               </div>
@@ -120,16 +113,15 @@ export default function People() {
               <tbody>
                 {rows.map((p) => {
                   const name = [p.first_name, p.last_name].filter(Boolean).join(" ");
-                  const rs = RISK_STYLE[p.risk];
                   return (
                     <tr key={p.email}>
                       <td>
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           {name && <strong>{name}</strong>}
-                          <span className="mono" style={{ color: "var(--text-dim)" }}>{p.email}</span>
+                          <span className="mono" style={{ color: "var(--text-muted)" }}>{p.email}</span>
                         </div>
                       </td>
-                      <td><span className="pill" style={{ background: rs.bg, color: rs.fg }}>{rs.label}</span></td>
+                      <td><span className={`risk ${p.risk}`}>{p.risk}</span></td>
                       <td style={{ fontVariantNumeric: "tabular-nums" }}>{p.targeted}</td>
                       <td style={{ fontVariantNumeric: "tabular-nums" }}>{p.opened}</td>
                       <td style={{ fontVariantNumeric: "tabular-nums", color: p.clicked ? "var(--violet)" : undefined }}>{p.clicked}</td>

@@ -9,10 +9,10 @@ import { useCountUp } from "../components/useCountUp";
 
 function riskColor(level: string): string {
   switch (level) {
-    case "critical": return "var(--bad)";
-    case "high": return "#e8833a";
-    case "medium": return "#d4a017";
-    default: return "var(--good)";
+    case "critical": return "var(--risk-critical)";
+    case "high": return "var(--risk-high)";
+    case "medium": return "var(--risk-med)";
+    default: return "var(--risk-low)";
   }
 }
 
@@ -278,15 +278,13 @@ export default function Dashboard() {
                 {surface.people.map((p) => (
                   <tr key={p.email}>
                     <td>
-                      {p.is_vip && <span title="VIP" style={{ color: "#f59e0b", marginRight: 6 }}>★</span>}
+                      {p.is_vip && <span title="VIP" style={{ color: "var(--vip)", marginRight: 6 }}>★</span>}
                       {p.email}
                     </td>
                     <td>{p.targeted}</td>
                     <td>{p.failed}</td>
                     <td>
-                      <span className="pill" style={{ color: p.risk === "high" ? "#dc2626" : p.risk === "medium" ? "#d97706" : "#16a34a" }}>
-                        {p.risk}
-                      </span>
+                      <span className={`risk ${p.risk}`}>{p.risk}</span>
                     </td>
                   </tr>
                 ))}
@@ -409,7 +407,7 @@ function FunnelBar({ label, value, total, color, delay }: { label: string; value
 function BenchBar({ label, your, base, lowerBetter }: { label: string; your: number; base: number; lowerBetter?: boolean }) {
   const max = Math.max(your, base, 1);
   const better = lowerBetter ? your <= base : your >= base;
-  const yourColor = better ? "#16a34a" : "#dc2626";
+  const yourColor = better ? "var(--good)" : "var(--bad)";
   return (
     <div style={{ flex: "1 1 240px", minWidth: 220 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>

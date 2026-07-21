@@ -26,6 +26,29 @@
   --radius-lg: 20px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
   --mono: "Cascadia Code", "SFMono-Regular", ui-monospace, Consolas, monospace;
+
+  /* ── Design-system tokens (single source of truth) ───────────────── */
+  /* Muted text tuned for WCAG AA on panel/bg in BOTH themes (used for hints,
+     sub-labels). Brighter than --text-dim so helper text is never washed out. */
+  --text-muted: #aab6cd;
+
+  /* Semantic + risk color language — one ramp reused everywhere (People,
+     dashboard human-risk index, VIP table, benchmark, badges). low→green,
+     medium→amber, high→red, critical→deep red. */
+  --info: #38bdf8;
+  --risk-low: var(--good);
+  --risk-med: var(--warn);
+  --risk-high: var(--bad);
+  --risk-critical: #f43f5e;
+  --vip: #f59e0b;               /* high-value target (★) */
+
+  /* Type scale (px, matched to the existing UI so nothing shifts). */
+  --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-base: 14px; --fs-md: 15px;
+  --fs-lg: 18px; --fs-xl: 23px; --fs-2xl: 30px;
+
+  /* 8px-based spacing scale. */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
 }
 
 :root[data-theme="light"] {
@@ -51,6 +74,11 @@
   --shadow: 0 8px 24px -10px rgba(16,24,40,0.16), 0 1px 2px rgba(16,24,40,0.05);
   --shadow-lg: 0 28px 60px -18px rgba(16,24,40,0.24);
   --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  /* Darker muted + risk hues so text/pills keep AA contrast on light surfaces. */
+  --text-muted: #505b70;
+  --info: #0284c7;
+  --risk-critical: #be123c;
+  --vip: #b45309;
 }
 
 * { box-sizing: border-box; }
@@ -202,7 +230,9 @@ a:focus-visible, .nav-link:focus-visible { box-shadow: var(--ring); }
 .main { padding: 26px 34px; overflow-y: auto; height: 125vh; min-height: 0; }
 .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 16px; }
 .page-head h1 { font-size: 23px; margin: 0; font-weight: 750; letter-spacing: -0.4px; }
-.page-sub { color: var(--text-dim); font-size: 13px; margin-top: 3px; }
+.page-sub { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+/* Standalone helper text (WCAG AA in both themes). */
+.hint { color: var(--text-muted); font-size: var(--fs-sm); }
 
 /* ── Cards / panels ─────────────────────────────────── */
 .card {
@@ -303,6 +333,42 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
 .badge.clicked { color: var(--violet); background: color-mix(in srgb, var(--violet) 16%, transparent); }
 .badge.submitted, .badge.error { color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); }
 
+/* ── Risk pill (one reusable risk-color language) ───── */
+.risk {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px; font-size: var(--fs-xs);
+  font-weight: 650; border: 1px solid transparent; text-transform: capitalize;
+  white-space: nowrap;
+}
+.risk::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.risk.low { color: var(--risk-low); background: color-mix(in srgb, var(--risk-low) 15%, transparent); }
+.risk.medium { color: var(--risk-med); background: color-mix(in srgb, var(--risk-med) 17%, transparent); }
+.risk.high { color: var(--risk-high); background: color-mix(in srgb, var(--risk-high) 15%, transparent); }
+.risk.critical { color: var(--risk-critical); background: color-mix(in srgb, var(--risk-critical) 16%, transparent); }
+
+/* ── Toggle chip (multiselect: target vs exclude groups) ───── */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg-elevated); color: var(--text-dim);
+  font-family: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+.chip:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--text); }
+.chip:focus-visible { outline: none; box-shadow: var(--ring); }
+.chip:active { transform: translateY(1px); }
+.chip.on {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  color: var(--text);
+}
+.chip.on.exclude {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  border-color: color-mix(in srgb, var(--bad) 50%, var(--border));
+  color: var(--bad);
+}
+.chip:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
 /* ── Buttons ────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -344,7 +410,7 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
 /* ── Forms ──────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
 .field label { font-size: 13px; font-weight: 620; color: var(--text); }
-.field .hint { font-size: 12px; color: var(--text-dim); font-weight: 400; }
+.field .hint { font-size: 12px; color: var(--text-muted); font-weight: 450; }
 input, select, textarea {
   background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px;
   color: var(--text); padding: 10px 12px; font-family: inherit; font-size: 13px;

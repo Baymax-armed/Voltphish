@@ -57,8 +57,29 @@ def list_users(db: DbSession = Depends(get_db)) -> list[UserAdminOut]:
     return [UserAdminOut.from_user(u) for u in users]
 
 
+def _require_admin_for_privilege(me: User, *, setting_admin: bool, granting_perms: bool) -> None:
+    """Only a true admin may hand out the admin role or delegated permissions.
+    A delegated `users:manage` operator can manage the user lifecycle but must
+    NOT be able to escalate privileges (self or others) — that would make the
+    delegated grant equivalent to full admin (SECURITY: privilege escalation)."""
+    if (setting_admin or granting_perms) and me.role is not UserRole.admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only an admin can assign the admin role or grant permissions.",
+        )
+
+
 @router.post("", response_model=UserAdminOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: DbSession = Depends(get_db)) -> UserAdminOut:
+def create_user(
+    payload: UserCreate,
+    db: DbSession = Depends(get_db),
+    me: User = Depends(get_current_user),
+) -> UserAdminOut:
+    _require_admin_for_privilege(
+        me,
+        setting_admin=payload.role is UserRole.admin,
+        granting_perms=bool(payload.permissions),
+    )
     user = User(
         email=str(payload.email).lower(),
         password_hash=hash_password(payload.password),
@@ -88,6 +109,14 @@ def update_user(
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    # Privilege-affecting changes (role or delegated permissions) require a true
+    # admin — a delegated `users:manage` operator must not be able to escalate.
+    _require_admin_for_privilege(
+        me,
+        setting_admin=(payload.role is not None and payload.role is not user.role),
+        granting_perms=payload.permissions is not None,
+    )
 
     would_demote = payload.role is not None and payload.role is not UserRole.admin
     would_disable = payload.is_active is False

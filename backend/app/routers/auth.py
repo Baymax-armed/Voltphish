@@ -50,6 +50,11 @@ _login_limiter = make_rate_limiter(
 
 _GENERIC_LOGIN_ERROR = "Invalid email or password"
 
+# A valid argon2id hash of a random string, computed once at startup. Verifying a
+# submitted password against this performs real argon2 work (and always fails),
+# equalizing login latency for non-existent accounts (anti-enumeration).
+_DUMMY_HASH = hash_password(new_session_token())
+
 
 def _mint_session(db: DbSession, user: User, request: Request, response: Response) -> str:
     """Rotate sessions and mint a fresh one + cookie. Returns the CSRF token.
@@ -107,8 +112,10 @@ def login(
         select(User).where(User.email == payload.email.lower())
     ).scalar_one_or_none()
 
-    # Always run a hash comparison to avoid timing-based user enumeration.
-    stored = user.password_hash if user else "$argon2id$v=19$m=65536,t=3,p=2$" + "A" * 22
+    # Always run a REAL argon2 verification even when the user doesn't exist, so
+    # login latency doesn't reveal whether an account exists (user enumeration).
+    # The dummy must be a valid encoded hash or verify() would bail out early.
+    stored = user.password_hash if user else _DUMMY_HASH
     ok = verify_password(stored, payload.password)
 
     if not user or not user.is_active or not ok:
@@ -339,6 +346,15 @@ def oidc_callback(
     if user is None:
         if not info["auto_provision"]:
             log.info("oidc: no account for %s and auto-provision off", email)
+            return RedirectResponse(url="/login?sso_error=noaccount", status_code=302)
+        # Auto-provisioning must fail closed: require a verified email AND a
+        # configured domain allowlist, so an unverified or arbitrary-domain
+        # identity from the IdP can't silently create an account.
+        if not info.get("email_verified"):
+            log.info("oidc: refusing to provision unverified email %s", email)
+            return RedirectResponse(url="/login?sso_error=verify", status_code=302)
+        if not info.get("has_allowlist"):
+            log.warning("oidc: refusing auto-provision for %s — no domain allowlist configured", email)
             return RedirectResponse(url="/login?sso_error=noaccount", status_code=302)
         user = User(
             email=email,

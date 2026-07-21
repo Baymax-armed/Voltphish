@@ -203,11 +203,24 @@ def complete_login(db: DbSession, *, code: str, state: str, redirect_uri: str) -
     email = (claims.get("email") or "").strip().lower()
     if not email or "@" not in email:
         raise OidcError("No email in the SSO profile")
-    if claims.get("email_verified") is False:
-        raise OidcError("Your SSO email is not verified")
+
+    # Normalize email_verified: only an explicit truthy value counts as verified.
+    # A missing/None/"false" claim is treated as UNVERIFIED (fail closed), not
+    # accepted like the previous `is False` check did.
+    ev = claims.get("email_verified")
+    email_verified = ev is True or (isinstance(ev, str) and ev.strip().lower() == "true")
+
     if cfg["allowed_domains"]:
         domain = email.rsplit("@", 1)[-1]
         if domain not in cfg["allowed_domains"]:
             raise OidcError("Your email domain is not allowed to sign in")
 
-    return {"email": email, "name": claims.get("name") or "", "auto_provision": cfg["auto_provision"]}
+    return {
+        "email": email,
+        "name": claims.get("name") or "",
+        "auto_provision": cfg["auto_provision"],
+        "email_verified": email_verified,
+        # Auto-provisioning without a domain allowlist is unsafe (any email from
+        # the issuer would get an account); the caller enforces this.
+        "has_allowlist": bool(cfg["allowed_domains"]),
+    }

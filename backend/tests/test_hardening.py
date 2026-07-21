@@ -45,6 +45,22 @@ def test_rbac_plain_operator_blocked(auth_client: TestClient):
     assert me["permissions"] == []
 
 
+def test_rbac_no_self_escalation(auth_client: TestClient):
+    """A delegated users:manage operator must NOT be able to promote to admin
+    or grant permissions (would defeat least-privilege)."""
+    _make_operator(auth_client, "escal@corp.com", ["users:manage"])
+    op = _login(auth_client, "escal@corp.com", "operator-pw-at-least-12-chars")
+    me = op.get("/api/v1/auth/me").json()
+    # self-promotion to admin -> 403
+    assert op.put(f"/api/v1/users/{me['id']}", json={"role": "admin"}).status_code == 403
+    # granting itself more permissions -> 403
+    assert op.put(f"/api/v1/users/{me['id']}", json={"permissions": ["settings:manage"]}).status_code == 403
+    # creating a fresh admin -> 403
+    assert op.post("/api/v1/users", json={"email": "x@corp.com", "password": "pw-at-least-12-chars", "role": "admin"}).status_code == 403
+    # still just an operator with the one delegated perm
+    assert op.get("/api/v1/auth/me").json()["permissions"] == ["users:manage"]
+
+
 def test_rbac_bogus_permission_filtered(auth_client: TestClient):
     _make_operator(auth_client, "deleg2@corp.com", ["users:manage", "not:a:real:perm"])
     op = _login(auth_client, "deleg2@corp.com", "operator-pw-at-least-12-chars")

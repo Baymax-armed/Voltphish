@@ -123,6 +123,51 @@ async def handle_send_email(payload: dict) -> None:
         db.close()
 
 
+def _training_invite_html(title: str, link: str) -> str:
+    import html as _html
+
+    t = _html.escape(title)
+    return (
+        '<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;line-height:1.55">'
+        '<h2 style="font-size:19px;margin:0 0 10px">Security awareness training assigned</h2>'
+        f'<p>You’ve been assigned a short training module: <strong>{t}</strong>. It only takes a few minutes.</p>'
+        f'<p style="margin:18px 0"><a href="{link}" style="display:inline-block;background:#1f5fd6;color:#fff;'
+        'text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:600">Start training</a></p>'
+        f'<p style="color:#666;font-size:13px">Or open this link: {link}</p></div>'
+    )
+
+
+@register("send_training_invite")
+async def handle_send_training_invite(payload: dict) -> None:
+    """Email one enrolled recipient their unique training link."""
+    from ..models import SendingProfile, TrainingEnrollment, TrainingModule
+
+    db = SessionLocal()
+    try:
+        enr = db.get(TrainingEnrollment, int(payload["enrollment_id"]))
+        if enr is None:
+            return
+        module = db.get(TrainingModule, enr.module_id)
+        profile = db.get(SendingProfile, int(payload["profile_id"]))
+        if module is None or profile is None:
+            return
+        base = str(payload.get("base", "")).rstrip("/")
+        link = f"{base}/train/{enr.token}"
+        await send_email(
+            OutgoingEmail(
+                to_address=enr.email, from_address=profile.from_address,
+                subject=f"Security training assigned: {module.title}",
+                html=_training_invite_html(module.title, link),
+                text=f"You've been assigned security training: {module.title}\n\nStart here: {link}",
+                envelope_from=profile.envelope_sender, extra_headers=profile_headers(profile),
+            ),
+            profile,
+        )
+        log.info("training invite sent to %s (module %s)", enr.email, module.id)
+    finally:
+        db.close()
+
+
 def _maybe_complete(db, campaign_id: int) -> None:
     """Mark the campaign completed once no recipients remain to be sent."""
     remaining = (

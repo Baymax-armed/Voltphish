@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
@@ -249,6 +249,40 @@ def assign_module(module_id: int, payload: AssignIn, db: DbSession = Depends(get
         created += 1
     db.commit()
     return Message(detail=f"Assigned to {created} recipient(s).")
+
+
+class SendInvitesIn(BaseModel):
+    profile_id: int
+    only_pending: bool = True
+
+
+@router.post("/modules/{module_id}/send", response_model=Message, dependencies=[Depends(csrf_protect)])
+def send_invites(
+    module_id: int, payload: SendInvitesIn, request: Request, db: DbSession = Depends(get_db)
+) -> Message:
+    """Email each enrolled recipient their unique training link, via a sending
+    profile. Delivery goes through the durable job queue (restart-safe)."""
+    from ..models import SendingProfile
+    from ..services.queue import enqueue
+
+    module = db.get(TrainingModule, module_id)
+    if module is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Module not found")
+    if db.get(SendingProfile, payload.profile_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sending profile not found")
+
+    q = select(TrainingEnrollment).where(TrainingEnrollment.module_id == module_id)
+    if payload.only_pending:
+        q = q.where(TrainingEnrollment.status != EnrollmentStatus.completed)
+    enrollments = db.execute(q).scalars().all()
+    if not enrollments:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No one to email — assign the module first.")
+
+    base = str(request.base_url).rstrip("/")
+    for e in enrollments:
+        enqueue(db, "send_training_invite", {"enrollment_id": e.id, "profile_id": payload.profile_id, "base": base})
+    db.commit()
+    return Message(detail=f"Queued training emails to {len(enrollments)} recipient(s).")
 
 
 # ── analytics ─────────────────────────────────────────────────────────────────

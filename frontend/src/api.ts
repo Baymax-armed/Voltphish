@@ -118,6 +118,8 @@ export const api = {
   deleteModule: (id: number) => request<{ detail: string }>("DELETE", `/training/modules/${id}`),
   assignModule: (id: number, p: { emails?: string[]; group_id?: number | null }) =>
     request<{ detail: string }>("POST", `/training/modules/${id}/assign`, p),
+  sendTrainingInvites: (id: number, p: { profile_id: number; only_pending?: boolean }) =>
+    request<{ detail: string }>("POST", `/training/modules/${id}/send`, p),
   listEnrollments: (moduleId?: number) =>
     request<TrainingEnrollment[]>("GET", `/training/enrollments${moduleId ? `?module_id=${moduleId}` : ""}`),
   trainingLeaderboard: () => request<LeaderboardRow[]>("GET", "/training/leaderboard"),

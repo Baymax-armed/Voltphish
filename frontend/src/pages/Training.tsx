@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { AutoEnrollConfig, Difficulty, GroupSummary, QuizQuestion, RecommendationRow, TrainingModule, TrainingSummary, LeaderboardRow } from "../types";
+import type { AutoEnrollConfig, Difficulty, GroupSummary, Profile, QuizQuestion, RecommendationRow, TrainingModule, TrainingSummary, LeaderboardRow } from "../types";
 import { useToast } from "../components/Toast";
 import { Modal } from "../components/ui";
 
@@ -24,6 +24,7 @@ export default function Training() {
   const [board, setBoard] = useState<LeaderboardRow[]>([]);
   const [editing, setEditing] = useState<Partial<TrainingModule> | null>(null);
   const [assigning, setAssigning] = useState<TrainingModule | null>(null);
+  const [sending, setSending] = useState<TrainingModule | null>(null);
 
   const load = () => {
     api.listModules().then(setMods).catch(() => setMods([]));
@@ -91,6 +92,7 @@ export default function Training() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
                       <button className="btn primary" onClick={() => setAssigning(m)}>Assign</button>
+                      <button className="btn" onClick={() => setSending(m)} disabled={!m.enrolled} title={m.enrolled ? "Email the training link to enrolled people" : "Assign someone first"}>✉ Email links</button>
                       <button className="btn" onClick={() => setEditing(m)}>Edit</button>
                       <button className="btn" style={{ color: "#b91c1c" }} onClick={() => remove(m)}>Delete</button>
                     </div>
@@ -133,6 +135,9 @@ export default function Training() {
       )}
       {assigning && (
         <AssignModal module={assigning} onClose={() => setAssigning(null)} onDone={() => { setAssigning(null); load(); }} />
+      )}
+      {sending && (
+        <SendModal module={sending} onClose={() => setSending(null)} onDone={() => setSending(null)} />
       )}
     </>
   );
@@ -438,6 +443,61 @@ function AssignModal({ module, onClose, onDone }: { module: TrainingModule; onCl
           <button className="btn primary" onClick={submit} disabled={busy}>{busy ? "Assigning…" : "Assign"}</button>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function SendModal({ module, onClose, onDone }: { module: TrainingModule; onClose: () => void; onDone: () => void }) {
+  const { notify } = useToast();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profileId, setProfileId] = useState<number | "">("");
+  const [onlyPending, setOnlyPending] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api.listProfiles().then((ps) => { setProfiles(ps); if (ps[0]) setProfileId(ps[0].id); }).catch(() => setProfiles([]));
+  }, []);
+
+  const submit = async () => {
+    if (profileId === "") { notify("Pick a sending profile", "error"); return; }
+    setBusy(true);
+    try {
+      const r = await api.sendTrainingInvites(module.id, { profile_id: Number(profileId), only_pending: onlyPending });
+      notify(r.detail, "ok");
+      onDone();
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : "Send failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`Email training links — “${module.title}”`} onClose={onClose}>
+      <p className="hint" style={{ marginBottom: 14 }}>
+        Sends each enrolled person their <strong>unique</strong> training link by email, through a sending profile
+        (delivery goes through the durable queue). You can re-send anytime.
+      </p>
+      {profiles.length === 0 ? (
+        <div className="banner" style={{ margin: 0 }}>No sending profiles yet — add one under <strong>Sending Profiles</strong> first.</div>
+      ) : (
+        <>
+          <div className="field">
+            <label>Sending profile</label>
+            <select value={profileId} onChange={(e) => setProfileId(e.target.value === "" ? "" : Number(e.target.value))}>
+              {profiles.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.from_address}</option>)}
+            </select>
+          </div>
+          <label className="field check" style={{ cursor: "pointer" }}>
+            <input type="checkbox" checked={onlyPending} onChange={(e) => setOnlyPending(e.target.checked)} />
+            <span>Only those who haven't completed it yet</span>
+          </label>
+          <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+            <button className="btn" onClick={onClose}>Cancel</button>
+            <button className="btn primary" onClick={submit} disabled={busy}>{busy ? "Queuing…" : "Send emails"}</button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

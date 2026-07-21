@@ -175,6 +175,25 @@ def test_training_bad_token_benign_404(client: TestClient):
     assert client.get("/train/does-not-exist").status_code == 404
 
 
+def test_training_send_invites_queues_emails(auth_client: TestClient):
+    from sqlalchemy import func, select
+
+    from app.database import SessionLocal
+    from app.models import Job
+
+    mid = auth_client.get("/api/v1/training/modules").json()[0]["id"]
+    prof = auth_client.post("/api/v1/profiles", json={
+        "name": "t-inv", "from_address": "x@corp.com", "kind": "smtp", "host": "localhost", "port": 1025}).json()
+    auth_client.post(f"/api/v1/training/modules/{mid}/assign", json={"emails": ["inv1@corp.com"]})
+    db = SessionLocal()
+    before = db.execute(select(func.count(Job.id)).where(Job.type == "send_training_invite")).scalar_one()
+    r = auth_client.post(f"/api/v1/training/modules/{mid}/send", json={"profile_id": prof["id"]})
+    assert r.status_code == 200, r.text
+    after = db.execute(select(func.count(Job.id)).where(Job.type == "send_training_invite")).scalar_one()
+    assert after > before  # queued at least one invite
+    db.close()
+
+
 # ── Adaptive auto-enroll config ───────────────────────────────────────────────
 def test_autoenroll_config_roundtrip(auth_client: TestClient):
     r = auth_client.put("/api/v1/training/auto-enroll", json={"enabled": True, "mode": "adaptive", "module_id": None})

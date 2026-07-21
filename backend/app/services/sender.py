@@ -8,6 +8,8 @@ sends survive restarts and can be processed by multiple workers.
 from __future__ import annotations
 
 import logging
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -17,6 +19,36 @@ from ..security import new_result_id, new_short_code
 from .queue import enqueue
 
 log = logging.getLogger("voltphish.sender")
+
+# Business-hours window (local time in the campaign's timezone).
+_BH_START = 9   # 09:00
+_BH_END = 17    # 17:00
+
+
+def _shift_to_business_hours(dt: datetime, tz_name: str) -> datetime:
+    """Move a send time into the next Mon–Fri 09:00–17:00 slot in tz_name, so a
+    drip that would land at 2am or on a Sunday goes out the next business
+    morning instead. Returns an aware-UTC datetime."""
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(tz_name) if tz_name else timezone.utc
+    except Exception:  # noqa: BLE001 — unknown tz name → treat as UTC
+        tz = timezone.utc
+
+    local = dt.astimezone(tz)
+    for _ in range(14):  # bounded: at most ~2 weeks of shifting
+        if local.weekday() >= 5:  # Sat/Sun → next day 09:00
+            local = (local + timedelta(days=1)).replace(hour=_BH_START, minute=0, second=0, microsecond=0)
+            continue
+        if local.hour < _BH_START:
+            local = local.replace(hour=_BH_START, minute=0, second=0, microsecond=0)
+            continue
+        if local.hour >= _BH_END:  # after close → next day 09:00
+            local = (local + timedelta(days=1)).replace(hour=_BH_START, minute=0, second=0, microsecond=0)
+            continue
+        break
+    return local.astimezone(timezone.utc)
 
 
 def _existing_results(db: DbSession, campaign_id: int) -> list[Result]:
@@ -67,10 +99,18 @@ def enqueue_campaign(db: DbSession, campaign: Campaign) -> int:
         window = (campaign.send_by_at - start).total_seconds()
         gap = max(window, 0) / (n - 1)
 
-    from datetime import timedelta
-
     for i, result in enumerate(results):
         run_after = start + timedelta(seconds=gap * i) if gap else start
+        # NG-010: jitter so sends aren't perfectly evenly spaced (attackers
+        # don't fire at exact intervals, and a burst trips spam filters). Adds
+        # up to ±half a gap; non-security timing so a CSPRNG is more than enough.
+        if campaign.send_jitter and gap:
+            offset = (secrets.randbelow(int(gap) + 1)) - gap / 2
+            run_after = run_after + timedelta(seconds=offset)
+            if run_after < start:
+                run_after = start
+        if campaign.business_hours_only:
+            run_after = _shift_to_business_hours(run_after, campaign.send_timezone)
         enqueue(db, "send_email", {"result_id": result.id}, run_after=run_after)
     log.info("campaign %s: queued %s send_email job(s)", campaign.id, n)
     return n

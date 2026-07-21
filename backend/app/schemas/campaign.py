@@ -28,6 +28,10 @@ class CampaignCreate(BaseModel):
     launch_at: datetime | None = None
     # Optional drip window end: messages are spread across [launch_at, send_by_at].
     send_by_at: datetime | None = None
+    # Send-time realism (NG-010).
+    send_jitter: bool = False
+    business_hours_only: bool = False
+    send_timezone: str = Field(default="", max_length=64)
     # Just-in-time remediation (NG-013): auto-enrol failers into a module.
     auto_enroll_trigger: str = "off"  # off | clicked | submitted
     auto_enroll_module_id: int | None = None
@@ -81,6 +85,9 @@ class CampaignOut(BaseModel):
     auto_enroll_trigger: str = "off"
     auto_enroll_module_id: int | None = None
     auto_enroll_email: bool = False
+    send_jitter: bool = False
+    business_hours_only: bool = False
+    send_timezone: str = ""
     model_config = {"from_attributes": True}
 
 

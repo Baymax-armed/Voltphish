@@ -76,6 +76,12 @@ class Campaign(Base):
     launch_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     # If set, sends are spread (dripped) evenly across [launch_at, send_by_at].
     send_by_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # NG-010: realism. Jitter randomises each send time so they aren't perfectly
+    # evenly spaced; business_hours_only shifts sends into Mon–Fri 09:00–17:00 in
+    # send_timezone (IANA name, e.g. "Asia/Kolkata"; empty = UTC).
+    send_jitter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    business_hours_only: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    send_timezone: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
     template: Mapped["object"] = relationship("Template")

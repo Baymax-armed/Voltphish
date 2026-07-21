@@ -177,6 +177,8 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
     redirect_url: "",
     launch_at: "", // datetime-local; empty => launch now/manual
     send_by_at: "",
+    send_jitter: false,
+    business_hours_only: false,
     auto_enroll_trigger: "off", // off | clicked | submitted
     auto_enroll_module_id: 0, // 0 => adaptive pick
     auto_enroll_email: true,
@@ -263,6 +265,9 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
         redirect_url: f.redirect_url || null,
         launch_at: f.launch_at ? new Date(f.launch_at).toISOString() : null,
         send_by_at: f.send_by_at ? new Date(f.send_by_at).toISOString() : null,
+        send_jitter: f.send_jitter,
+        business_hours_only: f.business_hours_only,
+        send_timezone: tz,
         auto_enroll_trigger: f.auto_enroll_trigger,
         auto_enroll_module_id:
           f.auto_enroll_trigger !== "off" && f.auto_enroll_module_id ? f.auto_enroll_module_id : null,
@@ -486,6 +491,18 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
           <div className="hint" style={{ margin: "-6px 0 6px" }}>
             🕑 Times are in your local timezone (<strong>{tz}</strong>).
           </div>
+          {scheduled && (
+            <>
+              <label className="field check" style={{ cursor: "pointer" }}>
+                <input type="checkbox" checked={f.send_jitter} onChange={(e) => set("send_jitter", e.target.checked)} />
+                <span>Jitter send times <span className="hint">— spread sends unevenly across the window (more realistic, kinder to spam filters)</span></span>
+              </label>
+              <label className="field check" style={{ cursor: "pointer" }}>
+                <input type="checkbox" checked={f.business_hours_only} onChange={(e) => set("business_hours_only", e.target.checked)} />
+                <span>Business hours only <span className="hint">— shift sends into Mon–Fri 09:00–17:00 ({tz})</span></span>
+              </label>
+            </>
+          )}
           {!scheduled && (
             <div className="field check">
               <input id="launch" type="checkbox" checked={launch} onChange={(e) => setLaunch(e.target.checked)} />

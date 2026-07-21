@@ -253,4 +253,7 @@ export const api = {
 
   // people (cross-campaign risk view)
   listPeople: () => request<Person[]>("GET", "/people"),
+
+  // public link (Cloudflare Tunnel) status
+  getTunnel: () => request<{ configured: boolean; url: string | null }>("GET", "/tunnel"),
 };

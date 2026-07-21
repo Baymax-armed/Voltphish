@@ -26,6 +26,13 @@ services:
       # authorized host recipients can reach.
       VOLTPHISH_PHISH_BASE_URL: "http://localhost:8080"
 
+      # ── Public link via Cloudflare Tunnel (optional) ─────────
+      # When the `cloudflared` sidecar below is running, the app reads its live
+      # public URL from this metrics endpoint and offers it in the campaign form
+      # as a selectable Phishing URL — no custom domain needed. Harmless if the
+      # sidecar isn't running (the option just won't appear).
+      VOLTPHISH_TUNNEL_METRICS_URL: "http://cloudflared:20241"
+
       # ── Production hardening (uncomment for a real deployment) ─
       # VOLTPHISH_ENV: "production"
       # VOLTPHISH_SECRET_KEY: "<64+ random chars>"
@@ -37,6 +44,23 @@ services:
       # down` / `stop` / `restart` to keep your data.
       - voltphish-data:/data
     restart: unless-stopped
+
+  # Free public link for landing pages/tracking, no custom domain required.
+  # OPT-IN: only starts when you ask for it, because it exposes the app to the
+  # internet (admin login included — enable admin 2FA, and stop it when you're
+  # not running a live campaign):
+  #     docker compose --profile tunnel up -d
+  #     docker compose stop cloudflared        # take it down again
+  # The app auto-detects the assigned https://…trycloudflare.com URL and shows
+  # it in the New Campaign form. The URL changes each time this restarts.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://voltphish:8080 --metrics 0.0.0.0:20241
+    depends_on:
+      - voltphish
+    restart: unless-stopped
+    profiles:
+      - tunnel
 
 volumes:
   voltphish-data:

@@ -37,6 +37,7 @@ from .routers import (
     testmail,
     train,
     training,
+    tunnel,
     users,
     webhooks,
 )
@@ -108,6 +109,7 @@ app.include_router(deliverability.router)
 app.include_router(reported.router)
 app.include_router(training.router)
 app.include_router(people.router)
+app.include_router(tunnel.router)
 
 # Public, token-gated report-phish ingest + add-in asset server
 app.include_router(inbound.router)

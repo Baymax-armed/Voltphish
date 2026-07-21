@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     admin_port: int = 8080
     phish_base_url: str = "http://127.0.0.1:8080"
 
+    # Optional Cloudflare Tunnel sidecar. When set (e.g. http://cloudflared:20241),
+    # the app reads the tunnel's live public URL from cloudflared's metrics
+    # endpoint (/quicktunnel) and offers it as a selectable Phishing URL — so a
+    # self-hosted instance can send links that open on the public internet
+    # without a custom domain. Empty = feature off.
+    tunnel_metrics_url: str = ""
+
     cookie_secure: bool = False
 
     mail_backend: MailBackend = MailBackend.console

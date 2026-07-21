@@ -155,6 +155,8 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [tunnel, setTunnel] = useState<{ configured: boolean; url: string | null } | null>(null);
+  const [urlMode, setUrlMode] = useState<"tunnel" | "server" | "custom">("server");
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [launch, setLaunch] = useState(true);
@@ -194,7 +196,23 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
       }));
       setReady(true);
     });
+    // Detect a public Cloudflare Tunnel URL; if one is live, default to it so
+    // recipients' links open on the public internet out of the box.
+    api.getTunnel().then((t) => {
+      setTunnel(t);
+      if (t.url) {
+        setUrlMode("tunnel");
+        setF((prev) => ({ ...prev, phish_url: t.url! }));
+      }
+    }).catch(() => setTunnel({ configured: false, url: null }));
   }, []);
+
+  const pickUrlMode = (mode: "tunnel" | "server" | "custom") => {
+    setUrlMode(mode);
+    if (mode === "tunnel" && tunnel?.url) set("phish_url", tunnel.url);
+    else if (mode === "server") set("phish_url", window.location.origin);
+    else set("phish_url", ""); // custom: user types their own
+  };
 
   const missing = ready && (!groups.length || !templates.length || !profiles.length);
 
@@ -313,9 +331,39 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
           )}
           <div className="field">
             <label>
-              Phishing URL <span className="hint">base URL recipients' links resolve to</span>
+              Phishing URL <span className="hint">where recipients' links open</span>
             </label>
-            <input value={f.phish_url} onChange={(e) => set("phish_url", e.target.value)} required />
+            <select value={urlMode} onChange={(e) => pickUrlMode(e.target.value as "tunnel" | "server" | "custom")}>
+              {tunnel?.url && <option value="tunnel">🌐 Public link — {tunnel.url}</option>}
+              <option value="server">🖥 This server — {window.location.origin}</option>
+              <option value="custom">✏️ Custom URL…</option>
+            </select>
+            {urlMode === "custom" && (
+              <input
+                style={{ marginTop: 8 }}
+                value={f.phish_url}
+                onChange={(e) => set("phish_url", e.target.value)}
+                placeholder="https://your-public-host.example.com"
+                required
+              />
+            )}
+            {urlMode === "tunnel" && tunnel?.url && (
+              <span className="hint" style={{ marginTop: 6, display: "block" }}>
+                Links open at <span className="mono">{tunnel.url}</span> — a free public URL, no domain needed.
+                It changes if the tunnel restarts.
+              </span>
+            )}
+            {urlMode === "server" && f.phish_url.includes("localhost") && (
+              <span className="hint" style={{ marginTop: 6, display: "block", color: "var(--bad)" }}>
+                ⚠ localhost only opens on this machine — recipients won't be able to reach it. Use a public link.
+              </span>
+            )}
+            {tunnel?.configured && !tunnel.url && (
+              <span className="hint" style={{ marginTop: 6, display: "block" }}>
+                A Cloudflare Tunnel is configured but not running. Start it with{" "}
+                <span className="mono">docker compose --profile tunnel up -d</span>.
+              </span>
+            )}
           </div>
           <div className="field">
             <label>

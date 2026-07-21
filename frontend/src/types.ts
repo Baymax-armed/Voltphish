@@ -464,6 +464,24 @@ export interface Campaign {
   launch_at: string | null;
   send_by_at: string | null;
   completed_at: string | null;
+  auto_enroll_trigger?: string;
+  auto_enroll_module_id?: number | null;
+  auto_enroll_email?: boolean;
+}
+
+export interface Person {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  targeted: number;
+  opened: number;
+  clicked: number;
+  submitted: number;
+  reported: number;
+  trainings_assigned: number;
+  trainings_completed: number;
+  last_activity: string | null;
+  risk: "high" | "medium" | "low";
 }
 
 export interface CampaignStats {

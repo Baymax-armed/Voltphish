@@ -29,6 +29,7 @@ from .routers import (
     groups,
     inbound,
     pages,
+    people,
     profiles,
     reported,
     settings as settings_router,
@@ -106,6 +107,7 @@ app.include_router(dashboard.router)
 app.include_router(deliverability.router)
 app.include_router(reported.router)
 app.include_router(training.router)
+app.include_router(people.router)
 
 # Public, token-gated report-phish ingest + add-in asset server
 app.include_router(inbound.router)

@@ -26,6 +26,7 @@ from ..models import (
     TrainingModule,
 )
 from ..models.base import utcnow
+from .queue import enqueue
 
 log = logging.getLogger("voltphish.adaptive")
 
@@ -84,20 +85,49 @@ def _module_for_difficulty(db: DbSession, difficulty: Difficulty) -> TrainingMod
 
 def auto_enroll_on_fail(db: DbSession, *, result: Result, campaign_id: int, trigger: str) -> None:
     """Enroll a failing recipient in a training module if auto-enroll is on.
-    Idempotent per (module, email): skips if an open enrollment already exists.
-    Never raises — a training hiccup must not break tracking."""
+
+    A per-campaign rule (NG-013) takes precedence: each campaign can pick its
+    own trigger (clicked vs submitted-only), a fixed module (or adaptive), and
+    whether to auto-email the training link. If no per-campaign rule is set, the
+    global adaptive setting applies (backwards compatible).
+
+    Idempotent per (recipient, campaign): the first failure event wins, so a
+    click-then-submit doesn't stack two modules on one person. Never raises — a
+    training hiccup must not break tracking."""
+    from ..config import get_settings
+    from ..models import Campaign
+
     try:
-        cfg = get_auto_enroll_config(db)
-        if not cfg["enabled"] or not result.email:
+        if not result.email:
             return
-        if cfg["mode"] == "fixed" and cfg["module_id"]:
-            module = db.get(TrainingModule, cfg["module_id"])
+
+        campaign = db.get(Campaign, campaign_id)
+        module: TrainingModule | None = None
+        want_email = False
+
+        ce_trigger = getattr(campaign, "auto_enroll_trigger", "off") if campaign else "off"
+        if ce_trigger and ce_trigger != "off":
+            # A submitted-only rule ignores plain clicks; a clicked rule fires on
+            # either (a submit is also a click).
+            if ce_trigger == "submitted" and trigger != "submitted":
+                return
+            if campaign.auto_enroll_module_id:
+                module = db.get(TrainingModule, campaign.auto_enroll_module_id)
+            if module is None:
+                module = _module_for_difficulty(db, _pick_difficulty(db, result.email, trigger))
+            want_email = bool(campaign.auto_enroll_email)
         else:
-            module = _module_for_difficulty(db, _pick_difficulty(db, result.email, trigger))
+            cfg = get_auto_enroll_config(db)
+            if not cfg["enabled"]:
+                return
+            if cfg["mode"] == "fixed" and cfg["module_id"]:
+                module = db.get(TrainingModule, cfg["module_id"])
+            else:
+                module = _module_for_difficulty(db, _pick_difficulty(db, result.email, trigger))
+
         if module is None:
             return
-        # One auto-enrollment per (recipient, campaign): the first failure event
-        # wins, so a click-then-submit doesn't stack two modules on one person.
+
         existing = db.execute(
             select(TrainingEnrollment.id).where(
                 func.lower(TrainingEnrollment.email) == result.email.lower(),
@@ -106,14 +136,27 @@ def auto_enroll_on_fail(db: DbSession, *, result: Result, campaign_id: int, trig
         ).first()
         if existing:
             return
-        db.add(
-            TrainingEnrollment(
-                module_id=module.id, email=result.email.lower(),
-                token=secrets.token_urlsafe(24), campaign_id=campaign_id,
-            )
+
+        enrollment = TrainingEnrollment(
+            module_id=module.id, email=result.email.lower(),
+            token=secrets.token_urlsafe(24), campaign_id=campaign_id,
         )
+        db.add(enrollment)
         db.commit()
-        log.info("auto-enrolled %s in module %s (%s)", result.email, module.id, trigger)
+        log.info(
+            "auto-enrolled %s in module %s (campaign %s, %s)",
+            result.email, module.id, campaign_id, trigger,
+        )
+
+        # Optionally deliver the training link straight away, via the campaign's
+        # sending profile, through the durable job queue (restart-safe).
+        if want_email and campaign and campaign.profile_id:
+            base = get_settings().phish_base_url.rstrip("/")
+            enqueue(
+                db, "send_training_invite",
+                {"enrollment_id": enrollment.id, "profile_id": campaign.profile_id, "base": base},
+            )
+            db.commit()
     except Exception:  # noqa: BLE001
         log.exception("auto-enroll failed")
         db.rollback()

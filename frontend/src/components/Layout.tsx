@@ -113,6 +113,7 @@ const NAV = [
   { to: "/templates", label: "Email Templates", icon: "mail" },
   { to: "/pages", label: "Landing Pages", icon: "page" },
   { to: "/groups", label: "Groups & Targets", icon: "users" },
+  { to: "/people", label: "People", icon: "user" },
   { to: "/profiles", label: "Sending Profiles", icon: "server" },
   { to: "/training", label: "Training", icon: "cap" },
   { to: "/reported", label: "Reported Emails", icon: "inbox", perm: "reported:view" },

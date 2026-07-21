@@ -10,6 +10,7 @@ import CampaignDetail from "./pages/CampaignDetail";
 import Templates from "./pages/Templates";
 import LandingPages from "./pages/LandingPages";
 import Groups from "./pages/Groups";
+import People from "./pages/People";
 import Profiles from "./pages/Profiles";
 import Webhooks from "./pages/Webhooks";
 import ApiKeys from "./pages/ApiKeys";
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/templates" element={<Templates />} />
         <Route path="/pages" element={<LandingPages />} />
         <Route path="/groups" element={<Groups />} />
+        <Route path="/people" element={<People />} />
         <Route path="/profiles" element={<Profiles />} />
         <Route path="/apikeys" element={<ApiKeys />} />
         <Route path="/training" element={<Training />} />

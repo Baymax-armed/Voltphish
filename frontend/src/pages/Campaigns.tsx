@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api";
-import type { Campaign, GroupSummary, PageSummary, Profile, Template } from "../types";
+import type { Campaign, GroupSummary, PageSummary, Profile, Template, TrainingModule } from "../types";
 import { Badge, BulkBar, Empty, FormSkeleton, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
 import { confirmDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
@@ -154,6 +154,7 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
+  const [modules, setModules] = useState<TrainingModule[]>([]);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [launch, setLaunch] = useState(true);
@@ -170,17 +171,21 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
     redirect_url: "",
     launch_at: "", // datetime-local; empty => launch now/manual
     send_by_at: "",
+    auto_enroll_trigger: "off", // off | clicked | submitted
+    auto_enroll_module_id: 0, // 0 => adaptive pick
+    auto_enroll_email: true,
   });
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
     Promise.all([
-      api.listTemplates(), api.listGroups(), api.listProfiles(), api.listPages(),
-    ]).then(([t, g, p, pg]) => {
+      api.listTemplates(), api.listGroups(), api.listProfiles(), api.listPages(), api.listModules(),
+    ]).then(([t, g, p, pg, m]) => {
       setTemplates(t);
       setGroups(g);
       setProfiles(p);
       setPages(pg);
+      setModules(m);
       setF((prev) => ({
         ...prev,
         template_id: t[0]?.id ?? 0,
@@ -213,6 +218,10 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
         redirect_url: f.redirect_url || null,
         launch_at: f.launch_at ? new Date(f.launch_at).toISOString() : null,
         send_by_at: f.send_by_at ? new Date(f.send_by_at).toISOString() : null,
+        auto_enroll_trigger: f.auto_enroll_trigger,
+        auto_enroll_module_id:
+          f.auto_enroll_trigger !== "off" && f.auto_enroll_module_id ? f.auto_enroll_module_id : null,
+        auto_enroll_email: f.auto_enroll_trigger !== "off" && f.auto_enroll_email,
       });
       if (scheduled) {
         notify("Campaign scheduled");
@@ -318,6 +327,31 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
               placeholder="https://intranet.example.com/security-awareness"
             />
           </div>
+          <div className="field">
+            <label>
+              🎓 Auto-enrol failers in training <span className="hint">(close the loop automatically)</span>
+            </label>
+            <select value={f.auto_enroll_trigger} onChange={(e) => set("auto_enroll_trigger", e.target.value)}>
+              <option value="off">Off — no automatic training</option>
+              <option value="clicked">When someone clicks the link (or submits)</option>
+              <option value="submitted">Only when someone submits data (worst offenders)</option>
+            </select>
+          </div>
+          {f.auto_enroll_trigger !== "off" && (
+            <div className="row2">
+              <div className="field">
+                <label>Module</label>
+                <select value={f.auto_enroll_module_id} onChange={(e) => set("auto_enroll_module_id", Number(e.target.value))}>
+                  <option value={0}>Adaptive — pick by how badly they failed</option>
+                  {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                </select>
+              </div>
+              <label className="field check" style={{ alignSelf: "end", cursor: "pointer" }}>
+                <input type="checkbox" checked={f.auto_enroll_email} onChange={(e) => set("auto_enroll_email", e.target.checked)} />
+                <span>Email the training link right away</span>
+              </label>
+            </div>
+          )}
           <div className="row2">
             <div className="field">
               <label>

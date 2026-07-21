@@ -24,6 +24,10 @@ class CampaignCreate(BaseModel):
     launch_at: datetime | None = None
     # Optional drip window end: messages are spread across [launch_at, send_by_at].
     send_by_at: datetime | None = None
+    # Just-in-time remediation (NG-013): auto-enrol failers into a module.
+    auto_enroll_trigger: str = "off"  # off | clicked | submitted
+    auto_enroll_module_id: int | None = None
+    auto_enroll_email: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> "CampaignCreate":
@@ -31,6 +35,8 @@ class CampaignCreate(BaseModel):
             raise ValueError("profile_id is required")
         if self.send_by_at is not None and self.launch_at is not None and self.send_by_at <= self.launch_at:
             raise ValueError("send_by_at must be after launch_at")
+        if self.auto_enroll_trigger not in ("off", "clicked", "submitted"):
+            raise ValueError("auto_enroll_trigger must be off, clicked, or submitted")
         return self
 
 
@@ -68,6 +74,9 @@ class CampaignOut(BaseModel):
     launch_at: datetime | None
     send_by_at: datetime | None
     completed_at: datetime | None
+    auto_enroll_trigger: str = "off"
+    auto_enroll_module_id: int | None = None
+    auto_enroll_email: bool = False
     model_config = {"from_attributes": True}
 
 

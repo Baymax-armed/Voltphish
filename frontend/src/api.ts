@@ -30,6 +30,7 @@ import type {
   ImapSettings,
   LeaderboardRow,
   PermissionInfo,
+  Person,
   RecommendationRow,
   ReportedEmail,
   ReportedSummary,
@@ -249,4 +250,7 @@ export const api = {
   deleteCampaign: (id: number) => request<{ detail: string }>("DELETE", `/campaigns/${id}`),
   saveCampaignGroup: (id: number, p: { name: string; outcome: string }) =>
     request<{ group_id: number; name: string; added: number }>("POST", `/campaigns/${id}/save-group`, p),
+
+  // people (cross-campaign risk view)
+  listPeople: () => request<Person[]>("GET", "/people"),
 };

@@ -27,6 +27,7 @@ from ..models import (
     SendingProfile,
     Target,
     Template,
+    TrainingModule,
     User,
     utcnow,
 )
@@ -104,6 +105,9 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "group has no targets")
     if payload.page_id is not None and db.get(LandingPage, payload.page_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "page_id does not exist")
+    if payload.auto_enroll_trigger != "off" and payload.auto_enroll_module_id is not None:
+        if db.get(TrainingModule, payload.auto_enroll_module_id) is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "auto_enroll_module_id does not exist")
 
     # A future launch date schedules the campaign; the background scheduler
     # picks it up when due. No launch date = a manual-launch draft.
@@ -119,6 +123,9 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         redirect_url=str(payload.redirect_url) if payload.redirect_url else None,
         launch_at=payload.launch_at,
         send_by_at=payload.send_by_at,
+        auto_enroll_trigger=payload.auto_enroll_trigger,
+        auto_enroll_module_id=payload.auto_enroll_module_id if payload.auto_enroll_trigger != "off" else None,
+        auto_enroll_email=payload.auto_enroll_email,
         status=CampaignStatus.scheduled if scheduled else CampaignStatus.draft,
     )
     db.add(campaign)

@@ -4,7 +4,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, String
+from sqlalchemy import Boolean, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -46,6 +46,16 @@ class Campaign(Base):
     phish_url: Mapped[str] = mapped_column(String(500), nullable=False)
     # Where a clicked link ultimately lands (Phase 1: an external teaching page).
     redirect_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Just-in-time remediation: auto-enrol a recipient who fails this campaign into
+    # a training module. Trigger: off | clicked | submitted (submitted-only ignores
+    # plain clicks). If auto_enroll_email, the training link is emailed via the
+    # campaign's sending profile. Module null => adaptive pick by behaviour.
+    auto_enroll_trigger: Mapped[str] = mapped_column(String(12), default="off", nullable=False)
+    auto_enroll_module_id: Mapped[int | None] = mapped_column(
+        ForeignKey("training_modules.id", ondelete="SET NULL"), nullable=True
+    )
+    auto_enroll_email: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
     launch_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)

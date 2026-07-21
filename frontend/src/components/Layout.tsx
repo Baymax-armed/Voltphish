@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useTheme } from "../theme";
 import ChangePassword from "./ChangePassword";
@@ -120,7 +120,6 @@ const NAV = [
   { to: "/webhooks", label: "Webhooks", icon: "webhook", perm: "webhooks:manage" },
   { to: "/apikeys", label: "API Keys", icon: "key" },
   { to: "/users", label: "Users", icon: "user", perm: "users:manage" },
-  { to: "/settings", label: "Settings", icon: "gear", perm: "settings:manage" },
   { to: "/docs", label: "Documentation", icon: "book" },
 ];
 
@@ -134,6 +133,8 @@ function canSee(n: { perm?: string; adminOnly?: boolean }, user: { role?: string
 export default function Layout() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
+  const nav = useNavigate();
+  const canSettings = canSee({ perm: "settings:manage" }, user);
   const [pwOpen, setPwOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("voltphish-sidebar") === "1");
   const location = useLocation();
@@ -180,10 +181,22 @@ export default function Layout() {
               <div className="user-role">{user?.role}</div>
             </div>
           </div>
-          <button className="foot-btn" onClick={toggle}>
-            <span className="foot-ico">{theme === "dark" ? "☀️" : "🌙"}</span>
-            {theme === "dark" ? "Light mode" : "Dark mode"}
-          </button>
+          {canSettings ? (
+            <div className="foot-row">
+              <button className="foot-btn" onClick={toggle} title="Toggle theme">
+                <span className="foot-ico">{theme === "dark" ? "☀️" : "🌙"}</span>
+                {theme === "dark" ? "Light" : "Dark"}
+              </button>
+              <button className="foot-btn" onClick={() => nav("/settings")} title="Settings">
+                <span className="foot-ico">⚙️</span>Settings
+              </button>
+            </div>
+          ) : (
+            <button className="foot-btn" onClick={toggle}>
+              <span className="foot-ico">{theme === "dark" ? "☀️" : "🌙"}</span>
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </button>
+          )}
           <div className="foot-row">
             <button className="foot-btn" onClick={() => setPwOpen(true)}>
               <span className="foot-ico">🔑</span>Password

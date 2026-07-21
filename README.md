@@ -6,13 +6,14 @@
 
   <h1>VoltPhish</h1>
   <p><strong>The modern, open-source phishing-simulation & human-risk platform.</strong><br/>
-  Run realistic attack simulations, turn every fail into a lesson, and measure your people's risk — all from one Docker container.</p>
+  Run realistic attack simulations across email, SMS & QR — turn every fail into a lesson, catch every report, and measure your people's risk. All from one Docker container.</p>
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
     <img alt="Backend" src="https://img.shields.io/badge/backend-FastAPI-009688" />
     <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%2018%20%2B%20TS-61dafb" />
     <img alt="Deploy" src="https://img.shields.io/badge/deploy-Docker%20(1%20command)-2496ed" />
+    <img alt="Channels" src="https://img.shields.io/badge/channels-email%20%C2%B7%20SMS%20%C2%B7%20QR%20%C2%B7%20calendar-6f42c1" />
   </p>
 </div>
 
@@ -22,39 +23,15 @@
 
 ## Why VoltPhish
 
-Most phishing tools stop at "who clicked." VoltPhish closes the loop: **attack → teach → measure.** It's a full-stack app (React admin + FastAPI backend + tracking server) that runs as **one process in one container**, secure-by-default, with a UI built for people who run awareness programs — not just red teams.
+Most open-source phishing tools stop at **"who clicked."** VoltPhish runs the whole program a real awareness team needs — **attack → report → teach → measure** — as a full-stack app (React admin + FastAPI backend + tracking server) in **one process, one container**, secure-by-default.
 
-## ✨ Highlights
-
-### Attack simulations
-- **📧 Email phishing** — WYSIWYG templates with `{{.FirstName}}` / `{{.URL}}` personalization, a ready-made **gallery** (IT, Microsoft 365, Google, HR, courier, MFA…), `.eml` import, and attachments.
-- **🎣 Quishing (QR-code phishing)** — per-recipient QR codes that open the tracking link; served server-side so they render in Outlook/Gmail.
-- **🖱️ ClickFix "verify you're human"** — the 2025 fake-CAPTCHA lure, as a safe landing page.
-- **🪟 Browser-in-the-Browser** — a fake SSO popup with a spoofed address bar.
-- **🤖 AI template generator** — describe a scenario, get a drafted email (bring your own LLM key).
-- **🖥️ Landing pages** — a gallery of login clones + form pages; any `<form>` is auto-captured (passwords **never** stored).
-
-### Close the loop & measure
-- **🎓 Just-in-time training** — anyone who clicks/submits lands on a teaching page with the red flags + a tracked "I understand."
-- **🧠 Human Risk Score** — a behaviour-based risk index per user and per department.
-- **🏆 Security Champions** — a leaderboard of the people who *report* the phish.
-- **📊 Dashboard** — engagement funnel, timeline chart, at-risk users, campaign breakdowns.
-- **📄 Board report** — one-click printable/PDF executive summary.
-
-### Ops & delivery
-- **🔔 Real-time Slack / Microsoft Teams alerts** the moment someone clicks or submits.
-- **📬 Deliverability pre-flight** — check a domain's SPF / DKIM / DMARC before you launch.
-- **🔗 Signed webhooks** (HMAC-SHA256, SSRF-guarded) & **REST API keys** (`Bearer`).
-- **⏱️ Scheduling & drip throttle**, a **durable retrying job queue**, and **bulk actions** across every list.
-- **⚙️ One-command Docker** with auto-bootstrapped admin, Alembic migrations applied on startup.
+It's built for the people who *run* awareness programs, not just red teams: multi-channel lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for KnowBe4 or Proofpoint.
 
 ## 🚀 Quickstart — one command
 
 ```bash
 docker compose up --build
 ```
-
-Then:
 
 1. Open **http://localhost:8080**
 2. Grab the first-run admin password from the logs:
@@ -66,13 +43,79 @@ Then:
 
 Data (SQLite + outbox) persists in the `phishsim-data` volume. Use `docker compose up -d` to keep it — **not** `down -v`, which wipes the volume.
 
+## ✨ Features
+
+### 🎣 Attack simulations — multi-channel
+- **📧 Email phishing** — WYSIWYG templates with `{{.FirstName}}` / `{{.URL}}` personalization, a ready-made **gallery** (IT, Microsoft 365, Google, HR, courier, MFA…), `.eml` import, and attachments with **open-tracking**.
+- **📱 SMS / smishing** — send simulated texts via Twilio, Textbelt, a generic HTTP provider, or a console backend for testing.
+- **🔲 QR / quishing** — per-recipient QR codes that open the tracking link; rendered server-side so they survive Outlook/Gmail.
+- **📅 Calendar (.ics) lures** — meeting-invite attachments with a tracked "join" link — a vector most tools ignore.
+- **🖱️ ClickFix "verify you're human"** & **🪟 Browser-in-the-Browser** — modern 2025-era landing pages (fake CAPTCHA, spoofed SSO popup).
+- **🤖 AI generation** — describe a scenario and draft a full **email or landing page** with Claude, GPT, or Gemini (bring your own key; provider configurable in Settings).
+- **🖥️ Landing pages** — login-clone gallery + form capture. Any `<form>` is auto-captured — **passwords are never stored.**
+
+### 📨 Catch the reports — the human firewall
+- **🔘 Report-Phish button** — a **native Outlook add-in** and **Gmail Apps Script** give employees one-click reporting. Reporting a simulation credits them as a Champion; reporting a *real* suspicious email routes it to an admin **triage queue**.
+- **📥 IMAP reported-phish monitoring** — or point VoltPhish at a shared mailbox; it polls, matches forwarded reports to the recipient, and credits them automatically.
+
+### 🎓 Close the loop — teach & train
+- **⚡ Just-in-time training** — anyone who clicks/submits lands on a teaching page with the red flags and a tracked "I understand."
+- **📚 Training LMS + content library** — build modules (HTML + video + quizzes), assign to groups, and deliver via unique per-trainee links. Ships with **4 starter modules** (Spot the Phish, Password Hygiene & MFA, BEC, Reporting). Completion tracking, pass scores, **points & a leaderboard**.
+- **🧠 Adaptive auto-enrollment** — fail a simulation and get **auto-enrolled** in training at a difficulty matched to your behaviour — the "teachable moment," automated.
+
+### 📊 Measure risk
+- **🧠 Human Risk Score** — a behaviour-based risk index per user and per department.
+- **🎯 Attack surface & VIPs** — flag execs/finance as **VIP** and track who's most-targeted (VAP-style).
+- **🌍 Geo-IP map** — where clicks and submits came from.
+- **📈 Industry benchmark** — compare your click & report rates against a baseline you set from public data (DBIR, vendor reports) — honest, no fabricated peer numbers.
+- **🏆 Security Champions**, **at-risk users**, engagement funnel, timeline chart, and a one-click **board-level PDF report**.
+
+### 🔐 Enterprise-grade access
+- **🪪 Single Sign-On (OIDC)** — Okta, Microsoft Entra ID, Google, Auth0, Keycloak — with PKCE and full ID-token validation.
+- **🔑 Admin 2FA (TOTP)** — Google Authenticator / Authy / 1Password, with QR enrollment.
+- **👥 Granular RBAC** — delegate specific admin areas (users, settings, webhooks, training, reports) to an operator without handing over full admin.
+
+### 🚚 Ops & delivery
+- **🔔 Real-time Slack / Microsoft Teams alerts** the moment someone clicks or submits.
+- **📬 Deliverability toolkit** — SPF/DKIM/DMARC **pre-flight check**, plus an **allowlist generator** that emits the exact, scoped entries for Microsoft 365 Advanced Delivery, Google Workspace, and generic SEGs.
+- **🔗 Signed webhooks** (HMAC-SHA256, SSRF-guarded) & **REST API keys** (`Bearer`).
+- **⏱️ Scheduling & drip throttle**, a **durable retrying job queue**, and **bulk actions** across every list.
+- **⚙️ One-command Docker** with auto-bootstrapped admin and Alembic migrations applied on startup.
+
+## 🆚 How it compares
+
+VoltPhish's only actively-maintained open-source peer is **Gophish** (no release since 2022). Here's the honest picture against it and the commercial platforms (KnowBe4 / Proofpoint / Cofense):
+
+| Capability | **VoltPhish** | Gophish | Commercial SAT |
+|---|:---:|:---:|:---:|
+| Email simulation + tracking | ✅ | ✅ | ✅ |
+| SMS / smishing | ✅ | ❌ | ✅ |
+| QR / quishing | ✅ | ❌ | ✅ |
+| Calendar (.ics) lures | ✅ | ❌ | ~ |
+| AI content generation | ✅ | ❌ | ~ (mostly curation) |
+| Report-Phish button (Outlook/Gmail) | ✅ | ❌ | ✅ |
+| IMAP reported-phish → Champions | ✅ | ✅ | ✅ |
+| Training LMS + quizzes + gamification | ✅ | ❌ | ✅ |
+| Just-in-time adaptive auto-enroll | ✅ | ❌ | ✅ |
+| Human risk score / VAP view | ✅ | ❌ | ✅ |
+| Geo-IP results map | ✅ | ❌ | ✅ |
+| Industry benchmark | ✅ (self-set) | ❌ | ✅ (peer data) |
+| SSO (OIDC) | ✅ | ❌ | ✅ |
+| Admin 2FA | ✅ | ❌ | ✅ |
+| Granular RBAC / delegated admin | ✅ | ❌ | ✅ |
+| Deliverability check + allowlist gen | ✅ | ❌ | ✅ |
+| Self-hosted & free | ✅ | ✅ | ❌ |
+| Actively maintained | ✅ | ❌ (2022) | ✅ |
+| Multi-tenant / MSP | ❌ | ❌ | ✅ |
+| Vishing (voice) | ❌ | ❌ | ✅ |
+
 ## 🧩 Tech stack
 
 | Layer | Stack |
 |---|---|
-| Backend | FastAPI, SQLAlchemy 2.0, Pydantic v2, Alembic, aiosmtplib, httpx |
+| Backend | FastAPI, SQLAlchemy 2.0, Pydantic v2, Alembic, aiosmtplib, httpx, authlib, pyotp, segno |
 | Frontend | React 18 + TypeScript, Vite, hand-rolled SVG charts, CKEditor 5 |
-| Security | argon2id hashing, AES-256-GCM column encryption, CSRF, SSRF guard, CSP/HSTS headers |
+| Security | argon2id hashing, AES-256-GCM column encryption, TOTP 2FA, OIDC SSO, CSRF, SSRF guard, rate-limit + lockout, CSP/HSTS headers |
 | Deploy | Multi-stage Docker (node build → python runtime), SQLite volume |
 
 ## 🛠️ Local dev (without Docker)
@@ -94,9 +137,10 @@ Interactive API docs (dev only): `http://localhost:8080/api/docs`
 VoltPhish is a *simulation* tool, deliberately built so it can't quietly become a credential-harvesting kit:
 
 - **Submitted passwords are never persisted.** The landing endpoint reads the form and discards the password; by default no submitted field values are stored at all — only that a submission occurred, for your metrics.
-- SMTP secrets are **encrypted at rest** (AES-256-GCM) and never returned by the API.
+- Secrets (SMTP, API keys, IMAP, SSO client secret, TOTP) are **encrypted at rest** (AES-256-GCM) and never returned by the API.
 - Every campaign action is recorded in an **append-only audit log**.
 - Tracking links use unguessable per-recipient tokens; invalid tokens return a benign response and record nothing.
+- The tool is scoped for defensive, authorized training — it deliberately omits offensive capabilities like live MFA-bypass session-proxying.
 
 Only run campaigns against recipients within your authorized scope, and keep a record of that authorization. See [SECURITY.md](SECURITY.md) for the threat model and control mapping.
 

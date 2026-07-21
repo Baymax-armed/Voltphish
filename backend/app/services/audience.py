@@ -43,3 +43,26 @@ def campaign_results(db: DbSession, campaign_id: int, outcome: str) -> list[Resu
 def campaign_emails(db: DbSession, campaign_id: int, outcome: str) -> set[str]:
     """Unique, lowercased recipient emails for a campaign+outcome."""
     return {r.email.strip().lower() for r in campaign_results(db, campaign_id, outcome) if r.email}
+
+
+def campaign_recipient_targets(campaign) -> list:
+    """NG-001: the actual people a campaign sends to — the union of every target
+    group's members, minus anyone in an exclusion group, deduped by lowercased
+    email (keeping the first snapshot seen). Falls back to the legacy single
+    `group` for campaigns created before multi-group existed."""
+    include_groups = list(campaign.target_groups) or ([campaign.group] if campaign.group else [])
+
+    excluded: set[str] = set()
+    for g in campaign.exclude_groups:
+        for t in g.targets:
+            if t.email:
+                excluded.add(t.email.strip().lower())
+
+    seen: dict[str, object] = {}
+    for g in include_groups:
+        for t in g.targets:
+            key = (t.email or "").strip().lower()
+            if not key or key in excluded or key in seen:
+                continue
+            seen[key] = t
+    return list(seen.values())

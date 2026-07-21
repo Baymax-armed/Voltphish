@@ -17,7 +17,11 @@ class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     template_id: int
     profile_id: int | None = None
-    group_id: int
+    group_id: int  # primary/legacy group (first target group)
+    # NG-001: target several groups and exclude (suppress) others. When
+    # group_ids is empty, [group_id] is used (backwards compatible).
+    group_ids: list[int] = Field(default_factory=list)
+    exclude_group_ids: list[int] = Field(default_factory=list)
     page_id: int | None = None
     phish_url: AnyHttpUrl
     redirect_url: AnyHttpUrl | None = None

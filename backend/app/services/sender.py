@@ -26,11 +26,15 @@ def _existing_results(db: DbSession, campaign_id: int) -> list[Result]:
 
 
 def prepare_results(db: DbSession, campaign: Campaign) -> int:
-    """Create one Result per target if not already present. Returns count."""
+    """Create one Result per recipient (deduped across target groups, minus
+    exclusions) if not already present. Returns count."""
     existing = _existing_results(db, campaign.id)
     if existing:
         return len(existing)
-    for target in campaign.group.targets:
+    from .audience import campaign_recipient_targets
+
+    targets = campaign_recipient_targets(campaign)
+    for target in targets:
         # Append through the relationship so campaign.results stays consistent.
         campaign.results.append(
             Result(
@@ -45,7 +49,7 @@ def prepare_results(db: DbSession, campaign: Campaign) -> int:
             )
         )
     db.flush()
-    return len(campaign.group.targets)
+    return len(targets)
 
 
 def enqueue_campaign(db: DbSession, campaign: Campaign) -> int:

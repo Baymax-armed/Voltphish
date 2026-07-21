@@ -157,7 +157,11 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [modules, setModules] = useState<TrainingModule[]>([]);
   const [tunnel, setTunnel] = useState<{ configured: boolean; url: string | null } | null>(null);
   const [urlMode, setUrlMode] = useState<"tunnel" | "server" | "custom">("server");
+  const [groupIds, setGroupIds] = useState<number[]>([]);
+  const [excludeIds, setExcludeIds] = useState<number[]>([]);
+  const [recip, setRecip] = useState<{ count: number; unique: number; excluded: number; duplicates: number } | null>(null);
   const [ready, setReady] = useState(false);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; // NG-011
   const [busy, setBusy] = useState(false);
   const [launch, setLaunch] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -194,6 +198,7 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
         group_id: g[0]?.id ?? 0,
         profile_id: p[0]?.id ?? 0,
       }));
+      if (g[0]) setGroupIds([g[0].id]);
       setReady(true);
     });
     // Detect a public Cloudflare Tunnel URL; if one is live, default to it so
@@ -206,6 +211,22 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
       }
     }).catch(() => setTunnel({ configured: false, url: null }));
   }, []);
+
+  // Live "X recipients (Y excluded, Z dupes removed)" preview (NG-001).
+  useEffect(() => {
+    if (groupIds.length === 0) { setRecip(null); return; }
+    let alive = true;
+    api.previewRecipients({ group_ids: groupIds, exclude_group_ids: excludeIds })
+      .then((r) => { if (alive) setRecip(r); })
+      .catch(() => { if (alive) setRecip(null); });
+    return () => { alive = false; };
+  }, [groupIds, excludeIds]);
+
+  const toggleGroup = (kind: "inc" | "exc", id: number) => {
+    const upd = (xs: number[]) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]);
+    if (kind === "inc") setGroupIds(upd);
+    else setExcludeIds(upd);
+  };
 
   const pickUrlMode = (mode: "tunnel" | "server" | "custom") => {
     setUrlMode(mode);
@@ -224,13 +245,19 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
       notify("Confirm you're authorized to test these recipients before launching.", "error");
       return;
     }
+    if (groupIds.length === 0) {
+      notify("Pick at least one target group.", "error");
+      return;
+    }
     setBusy(true);
     try {
       const created = await api.createCampaign({
         name: f.name,
         template_id: f.template_id,
         profile_id: f.profile_id,
-        group_id: f.group_id,
+        group_id: groupIds[0],
+        group_ids: groupIds,
+        exclude_group_ids: excludeIds,
         page_id: f.page_id || null,
         phish_url: f.phish_url,
         redirect_url: f.redirect_url || null,
@@ -292,27 +319,60 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
               ))}
             </select>
           </div>
-          <div className="row2">
+          <div className="field">
+            <label>
+              Target groups <span className="hint">pick one or more — combined &amp; deduped by email</span>
+            </label>
+            <div className="btn-row" style={{ flexWrap: "wrap" }}>
+              {groups.map((g) => (
+                <button
+                  type="button"
+                  key={g.id}
+                  className={`btn sm ${groupIds.includes(g.id) ? "primary" : ""}`}
+                  onClick={() => toggleGroup("inc", g.id)}
+                >
+                  {groupIds.includes(g.id) ? "✓ " : ""}{g.name} ({g.target_count})
+                </button>
+              ))}
+            </div>
+          </div>
+          {groups.length > 1 && (
             <div className="field">
-              <label>Target group</label>
-              <select value={f.group_id} onChange={(e) => set("group_id", Number(e.target.value))}>
+              <label>
+                Exclude / never-phish <span className="hint">execs, recent leavers, opt-outs — removed from the send</span>
+              </label>
+              <div className="btn-row" style={{ flexWrap: "wrap" }}>
                 {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} ({g.target_count})
-                  </option>
+                  <button
+                    type="button"
+                    key={g.id}
+                    className={`btn sm ${excludeIds.includes(g.id) ? "danger" : ""}`}
+                    onClick={() => toggleGroup("exc", g.id)}
+                    disabled={groupIds.includes(g.id) && groupIds.length === 1}
+                    title={groupIds.includes(g.id) && groupIds.length === 1 ? "Can't exclude your only target group" : ""}
+                  >
+                    {excludeIds.includes(g.id) ? "✕ " : ""}{g.name}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div className="field">
-              <label>Sending profile</label>
-              <select value={f.profile_id} onChange={(e) => set("profile_id", Number(e.target.value))}>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+          )}
+          {recip && (
+            <div className="banner" style={{ margin: "0 0 14px" }}>
+              📬 <strong>{recip.count}</strong> recipient{recip.count === 1 ? "" : "s"} will be targeted
+              {recip.excluded > 0 && <> · {recip.excluded} excluded</>}
+              {recip.duplicates > 0 && <> · {recip.duplicates} duplicate{recip.duplicates === 1 ? "" : "s"} removed</>}.
             </div>
+          )}
+          <div className="field">
+            <label>Sending profile</label>
+            <select value={f.profile_id} onChange={(e) => set("profile_id", Number(e.target.value))}>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
           {(
             <div className="field">
@@ -422,6 +482,9 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
                 disabled={!scheduled}
               />
             </div>
+          </div>
+          <div className="hint" style={{ margin: "-6px 0 6px" }}>
+            🕑 Times are in your local timezone (<strong>{tz}</strong>).
           </div>
           {!scheduled && (
             <div className="field check">

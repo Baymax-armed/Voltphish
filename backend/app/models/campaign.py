@@ -4,11 +4,26 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
 from .base import UTCDateTime, utcnow
+
+# NG-001: a campaign can target several groups and exclude (suppress) others.
+# The legacy single `group_id` column stays as the "primary" group for backward
+# compatibility; the real recipient set is the union of target_groups minus
+# exclude_groups (see services.audience.campaign_recipient_targets).
+campaign_target_groups = Table(
+    "campaign_target_groups", Base.metadata,
+    Column("campaign_id", ForeignKey("campaigns.id", ondelete="CASCADE"), primary_key=True),
+    Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
+)
+campaign_exclude_groups = Table(
+    "campaign_exclude_groups", Base.metadata,
+    Column("campaign_id", ForeignKey("campaigns.id", ondelete="CASCADE"), primary_key=True),
+    Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class CampaignStatus(str, enum.Enum):
@@ -66,6 +81,9 @@ class Campaign(Base):
     template: Mapped["object"] = relationship("Template")
     profile: Mapped["object"] = relationship("SendingProfile")
     group: Mapped["object"] = relationship("Group")
+    # NG-001: full include/exclude group sets (primary `group` kept for compat).
+    target_groups: Mapped[list["object"]] = relationship("Group", secondary=campaign_target_groups)
+    exclude_groups: Mapped[list["object"]] = relationship("Group", secondary=campaign_exclude_groups)
     page: Mapped["object"] = relationship("LandingPage")
     results: Mapped[list["object"]] = relationship(
         "Result", back_populates="campaign", cascade="all, delete-orphan"

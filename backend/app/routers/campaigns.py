@@ -31,7 +31,7 @@ from ..models import (
     User,
     utcnow,
 )
-from ..services.audience import OUTCOMES, campaign_results
+from ..services.audience import OUTCOMES, campaign_recipient_targets, campaign_results
 from ..schemas.campaign import (
     CampaignCreate,
     CampaignDetail,
@@ -98,11 +98,17 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "template_id does not exist")
     if db.get(SendingProfile, payload.profile_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "profile_id does not exist")
-    group = db.get(Group, payload.group_id)
-    if group is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "group_id does not exist")
-    if not group.targets:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "group has no targets")
+
+    # NG-001: resolve the include/exclude group sets (group_ids falls back to
+    # the single group_id for backward compatibility).
+    target_ids = payload.group_ids or [payload.group_id]
+    target_groups = [db.get(Group, gid) for gid in dict.fromkeys(target_ids)]
+    if any(g is None for g in target_groups):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "a target group does not exist")
+    exclude_groups = [db.get(Group, gid) for gid in dict.fromkeys(payload.exclude_group_ids)]
+    if any(g is None for g in exclude_groups):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "an exclusion group does not exist")
+
     if payload.page_id is not None and db.get(LandingPage, payload.page_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "page_id does not exist")
     if payload.auto_enroll_trigger != "off" and payload.auto_enroll_module_id is not None:
@@ -117,7 +123,7 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         channel="email",
         template_id=payload.template_id,
         profile_id=payload.profile_id,
-        group_id=payload.group_id,
+        group_id=target_groups[0].id,  # primary group = first target
         page_id=payload.page_id,
         phish_url=str(payload.phish_url),
         redirect_url=str(payload.redirect_url) if payload.redirect_url else None,
@@ -128,6 +134,14 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         auto_enroll_email=payload.auto_enroll_email,
         status=CampaignStatus.scheduled if scheduled else CampaignStatus.draft,
     )
+    campaign.target_groups = target_groups
+    campaign.exclude_groups = exclude_groups
+    # There must be someone left to send to after dedupe + exclusion.
+    if not campaign_recipient_targets(campaign):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No recipients — the target groups are empty or everyone is excluded.",
+        )
     db.add(campaign)
     try:
         db.commit()
@@ -138,6 +152,49 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
     record_event(db, campaign_id=campaign.id, rid=None, type=EventType.campaign_created)
     db.commit()
     return campaign
+
+
+class RecipientPreviewIn(BaseModel):
+    group_ids: list[int] = Field(default_factory=list)
+    exclude_group_ids: list[int] = Field(default_factory=list)
+
+
+class RecipientPreviewOut(BaseModel):
+    count: int       # final recipients, after dedupe + exclusion
+    unique: int      # unique emails across the target groups (before exclusion)
+    excluded: int    # how many were removed by the exclusion groups
+    duplicates: int  # duplicate memberships collapsed by dedupe
+
+
+@router.post("/preview-recipients", response_model=RecipientPreviewOut)
+def preview_recipients(payload: RecipientPreviewIn, db: DbSession = Depends(get_db)) -> RecipientPreviewOut:
+    """Live 'X recipients (Y excluded, Z dupes removed)' count for the campaign
+    form, without creating anything."""
+    include = [db.get(Group, gid) for gid in dict.fromkeys(payload.group_ids)]
+    if any(g is None for g in include):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "a target group does not exist")
+    exclude = [db.get(Group, gid) for gid in dict.fromkeys(payload.exclude_group_ids)]
+    if any(g is None for g in exclude):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "an exclusion group does not exist")
+
+    raw = 0
+    unique: set[str] = set()
+    for g in include:
+        for t in g.targets:
+            if t.email:
+                raw += 1
+                unique.add(t.email.strip().lower())
+    excluded_emails: set[str] = set()
+    for g in exclude:
+        for t in g.targets:
+            if t.email:
+                excluded_emails.add(t.email.strip().lower())
+
+    final = unique - excluded_emails
+    return RecipientPreviewOut(
+        count=len(final), unique=len(unique),
+        excluded=len(unique & excluded_emails), duplicates=raw - len(unique),
+    )
 
 
 @router.get("/{campaign_id}", response_model=CampaignDetail)

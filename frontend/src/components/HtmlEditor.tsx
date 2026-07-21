@@ -1,5 +1,6 @@
 import { lazy, Suspense, useRef, useState } from "react";
 import { insertIntoEditor } from "./editorUtils";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 // Lazy so the heavy CKEditor bundle loads only when an editor is opened.
 const RichEditor = lazy(() => import("./RichEditor"));
@@ -75,9 +76,20 @@ export default function HtmlEditor({
       </div>
 
       {mode === "design" && (
-        <Suspense fallback={<div className="spinner">Loading editor…</div>}>
-          <RichEditor value={value} onChange={onChange} onReady={(ed) => (editorRef.current = ed)} />
-        </Suspense>
+        <ErrorBoundary
+          fallback={
+            <div style={{ padding: 20, textAlign: "center", border: "1px solid var(--border)", borderRadius: 8 }}>
+              <p style={{ margin: "0 0 10px", color: "var(--text-dim)" }}>
+                Couldn't load the rich editor (the app may have just updated).
+              </p>
+              <button type="button" className="btn primary" onClick={() => window.location.reload()}>Reload</button>
+            </div>
+          }
+        >
+          <Suspense fallback={<div className="spinner">Loading editor…</div>}>
+            <RichEditor value={value} onChange={onChange} onReady={(ed) => (editorRef.current = ed)} />
+          </Suspense>
+        </ErrorBoundary>
       )}
       {mode === "source" && (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={Math.round(height / 22)} />

@@ -59,6 +59,9 @@ def mount_spa(app: FastAPI) -> None:
         candidate = dist / full_path
         if full_path and candidate.is_file() and candidate.resolve().is_relative_to(dist.resolve()):
             return FileResponse(str(candidate))
-        return FileResponse(str(index))
+        # index.html must never be cached, or a browser keeps loading an old
+        # shell that references hashed chunks a new deploy has already removed
+        # (the "blank page after update" bug). Hashed /assets stay long-cached.
+        return FileResponse(str(index), headers={"Cache-Control": "no-cache, must-revalidate"})
 
     log.info("Serving admin SPA from %s", dist)

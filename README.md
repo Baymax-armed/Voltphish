@@ -104,8 +104,6 @@ VoltPhish's only actively-maintained open-source peer is **Gophish** (no release
 | Deliverability check + allowlist gen | ✅ | ❌ | ✅ |
 | Self-hosted & free | ✅ | ✅ | ❌ |
 | Actively maintained | ✅ | ❌ (2022) | ✅ |
-| Multi-tenant / MSP | ❌ | ❌ | ✅ |
-| Vishing (voice) | ❌ | ❌ | ✅ |
 
 ## 🧩 Tech stack
 

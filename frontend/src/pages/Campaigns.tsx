@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api";
-import type { Campaign, GroupSummary, PageSummary, Profile, Template, TrainingModule } from "../types";
+import type { Campaign, CampaignDetail, GroupSummary, PageSummary, Profile, Template, TrainingModule } from "../types";
 import { Badge, BulkBar, Empty, FormSkeleton, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
 import { confirmDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
@@ -11,6 +11,7 @@ export default function Campaigns() {
   const nav = useNavigate();
   const [items, setItems] = useState<Campaign[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [prefill, setPrefill] = useState<CampaignDetail | null>(null);
   const [q, setQ] = useState("");
   const { sel, toggle, clear, allToggle } = useSelection();
 
@@ -47,17 +48,14 @@ export default function Campaigns() {
     }
   };
 
+  // Clone opens the campaign form pre-filled with the source's settings so you
+  // can tweak the copy before creating it — and it picks up a fresh public URL.
   const clone = async (c: Campaign) => {
     try {
-      await api.createCampaign({
-        name: `${c.name} (copy)`, template_id: c.template_id,
-        profile_id: c.profile_id, group_id: c.group_id,
-        page_id: c.page_id, phish_url: c.phish_url, redirect_url: c.redirect_url,
-      });
-      notify("Campaign cloned as draft");
-      load();
+      const detail = await api.getCampaign(c.id);
+      setPrefill(detail);
     } catch (e) {
-      notify(e instanceof ApiError ? e.message : "Clone failed", "error");
+      notify(e instanceof ApiError ? e.message : "Couldn't open a copy", "error");
     }
   };
 
@@ -130,7 +128,7 @@ export default function Campaigns() {
                     <RowMenu
                       items={[
                         { label: "View", icon: "→", onClick: () => nav(`/campaigns/${c.id}`) },
-                        { label: "Clone as draft", icon: "⧉", onClick: () => clone(c) },
+                        { label: "Clone & edit", icon: "⧉", onClick: () => clone(c) },
                         { label: "Delete", icon: "🗑", danger: true, onClick: () => remove(c) },
                       ]}
                     />
@@ -143,11 +141,12 @@ export default function Campaigns() {
       )}
 
       {creating && <CampaignForm onClose={() => setCreating(false)} />}
+      {prefill && <CampaignForm prefill={prefill} onClose={() => setPrefill(null)} />}
     </>
   );
 }
 
-function CampaignForm({ onClose }: { onClose: () => void }) {
+function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: CampaignDetail }) {
   const { notify } = useToast();
   const nav = useNavigate();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -168,20 +167,20 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [authRef, setAuthRef] = useState("");
 
   const [f, setF] = useState({
-    name: "",
-    template_id: 0,
-    profile_id: 0,
-    group_id: 0,
-    page_id: 0, // 0 => built-in awareness page
-    phish_url: window.location.origin,
-    redirect_url: "",
-    launch_at: "", // datetime-local; empty => launch now/manual
+    name: prefill ? `${prefill.name} (copy)` : "",
+    template_id: prefill?.template_id ?? 0,
+    profile_id: prefill?.profile_id ?? 0,
+    group_id: prefill?.group_id ?? 0,
+    page_id: prefill?.page_id ?? 0, // 0 => built-in awareness page
+    phish_url: window.location.origin, // refreshed below (fresh tunnel URL / prefill)
+    redirect_url: prefill?.redirect_url ?? "",
+    launch_at: "", // a clone starts as a fresh draft — no inherited schedule
     send_by_at: "",
-    send_jitter: false,
-    business_hours_only: false,
-    auto_enroll_trigger: "off", // off | clicked | submitted
-    auto_enroll_module_id: 0, // 0 => adaptive pick
-    auto_enroll_email: true,
+    send_jitter: prefill?.send_jitter ?? false,
+    business_hours_only: prefill?.business_hours_only ?? false,
+    auto_enroll_trigger: prefill?.auto_enroll_trigger ?? "off", // off | clicked | submitted
+    auto_enroll_module_id: prefill?.auto_enroll_module_id ?? 0, // 0 => adaptive pick
+    auto_enroll_email: prefill?.auto_enroll_email ?? true,
   });
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
@@ -194,22 +193,32 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
       setProfiles(p);
       setPages(pg);
       setModules(m);
-      setF((prev) => ({
-        ...prev,
-        template_id: t[0]?.id ?? 0,
-        group_id: g[0]?.id ?? 0,
-        profile_id: p[0]?.id ?? 0,
-      }));
-      if (g[0]) setGroupIds([g[0].id]);
+      if (prefill) {
+        setGroupIds(prefill.target_group_ids?.length ? prefill.target_group_ids : g[0] ? [g[0].id] : []);
+        setExcludeIds(prefill.exclude_group_ids ?? []);
+      } else {
+        setF((prev) => ({
+          ...prev,
+          template_id: t[0]?.id ?? 0,
+          group_id: g[0]?.id ?? 0,
+          profile_id: p[0]?.id ?? 0,
+        }));
+        if (g[0]) setGroupIds([g[0].id]);
+      }
       setReady(true);
     });
     // Detect a public Cloudflare Tunnel URL; if one is live, default to it so
-    // recipients' links open on the public internet out of the box.
+    // recipients' links open on the public internet out of the box. A clone
+    // deliberately re-detects here, so the copy captures the *current* public
+    // URL rather than reusing the original campaign's (possibly stale) one.
     api.getTunnel().then((t) => {
       setTunnel(t);
       if (t.url) {
         setUrlMode("tunnel");
         setF((prev) => ({ ...prev, phish_url: t.url! }));
+      } else if (prefill?.phish_url && !prefill.phish_url.includes("localhost")) {
+        setUrlMode("custom");
+        setF((prev) => ({ ...prev, phish_url: prefill.phish_url }));
       }
     }).catch(() => setTunnel({ configured: false, url: null }));
   }, []);
@@ -228,6 +237,13 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
     const upd = (xs: number[]) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]);
     if (kind === "inc") setGroupIds(upd);
     else setExcludeIds(upd);
+  };
+
+  const refreshTunnel = () => {
+    api.getTunnel().then((t) => {
+      setTunnel(t);
+      if (t.url) { setUrlMode("tunnel"); set("phish_url", t.url); }
+    }).catch(() => {});
   };
 
   const pickUrlMode = (mode: "tunnel" | "server" | "custom") => {
@@ -290,7 +306,7 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal title="New campaign" onClose={onClose}>
+    <Modal title={prefill ? "Clone campaign — review & create" : "New campaign"} onClose={onClose}>
       {!ready ? (
         <FormSkeleton fields={6} />
       ) : missing ? (
@@ -415,7 +431,8 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
             {urlMode === "tunnel" && tunnel?.url && (
               <span className="hint" style={{ marginTop: 6, display: "block" }}>
                 Links open at <span className="mono">{tunnel.url}</span> — a free public URL, no domain needed.
-                It changes if the tunnel restarts.
+                To mint a <strong>fresh</strong> URL, restart the tunnel (<span className="mono">docker compose restart cloudflared</span>), then{" "}
+                <button type="button" className="linklike" onClick={refreshTunnel} style={{ padding: 0 }}>↻ re-check</button>.
               </span>
             )}
             {urlMode === "server" && f.phish_url.includes("localhost") && (

@@ -467,6 +467,9 @@ export interface Campaign {
   auto_enroll_trigger?: string;
   auto_enroll_module_id?: number | null;
   auto_enroll_email?: boolean;
+  send_jitter?: boolean;
+  business_hours_only?: boolean;
+  send_timezone?: string;
 }
 
 export interface Person {
@@ -514,6 +517,8 @@ export interface Result {
 export interface CampaignDetail extends Campaign {
   stats: CampaignStats;
   results: Result[];
+  target_group_ids: number[];
+  exclude_group_ids: number[];
 }
 
 export interface EventItem {

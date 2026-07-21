@@ -105,6 +105,9 @@ class CampaignStats(BaseModel):
 class CampaignDetail(CampaignOut):
     stats: CampaignStats
     results: list[ResultOut]
+    # Full include/exclude group sets, so a clone can reproduce the targeting.
+    target_group_ids: list[int] = []
+    exclude_group_ids: list[int] = []
 
 
 class EventOut(BaseModel):

@@ -80,6 +80,22 @@ def test_create_multi_group_campaign_materializes_deduped(auth_client: TestClien
         db.close()
 
 
+def test_detail_exposes_group_ids_for_clone(auth_client: TestClient) -> None:
+    ids = _seed()
+    created = auth_client.post("/api/v1/campaigns", json={
+        "name": "MG detail", "template_id": ids["tmpl"], "profile_id": ids["prof"],
+        "group_id": ids["sales"], "group_ids": [ids["sales"], ids["support"]],
+        "exclude_group_ids": [ids["execs"]], "phish_url": "http://testserver/",
+    })
+    assert created.status_code == 201, created.text
+    cid = created.json()["id"]
+
+    detail = auth_client.get(f"/api/v1/campaigns/{cid}").json()
+    # A clone reads these back to reproduce the targeting.
+    assert sorted(detail["target_group_ids"]) == sorted([ids["sales"], ids["support"]])
+    assert detail["exclude_group_ids"] == [ids["execs"]]
+
+
 def test_create_rejects_when_everyone_excluded(auth_client: TestClient) -> None:
     ids = _seed()
     # Target sales, exclude sales -> nobody left.

@@ -82,6 +82,8 @@ def _detail(campaign: Campaign) -> CampaignDetail:
         **CampaignOut.model_validate(campaign).model_dump(),
         stats=_stats(campaign),
         results=[ResultOut.model_validate(r) for r in campaign.results],
+        target_group_ids=campaign.target_group_ids,
+        exclude_group_ids=campaign.exclude_group_ids,
     )
 
 

@@ -97,3 +97,14 @@ class Campaign(Base):
     events: Mapped[list["object"]] = relationship(
         "Event", back_populates="campaign", cascade="all, delete-orphan"
     )
+
+    @property
+    def target_group_ids(self) -> list[int]:
+        ids = [g.id for g in self.target_groups] if self.target_groups else []
+        if not ids and self.group_id:
+            ids = [self.group_id]
+        return ids
+
+    @property
+    def exclude_group_ids(self) -> list[int]:
+        return [g.id for g in self.exclude_groups]

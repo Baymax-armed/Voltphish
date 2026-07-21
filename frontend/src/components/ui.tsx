@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 // ── Row action (kebab) menu ─────────────────────────────────────────────────
@@ -149,6 +149,8 @@ export function Modal({
   // ended on the backdrop itself (so a drag-select ending outside won't close).
   const openedAt = useRef(0);
   const pressedBack = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     openedAt.current = performance.now();
@@ -156,9 +158,13 @@ export function Modal({
     window.addEventListener("keydown", h);
     // Lock body scroll while a modal is open.
     document.body.style.overflow = "hidden";
+    // Move focus into the dialog (a11y) and restore it to the trigger on close.
+    const prev = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
     return () => {
       window.removeEventListener("keydown", h);
       document.body.style.overflow = "";
+      prev?.focus?.();
     };
   }, [onClose]);
 
@@ -176,9 +182,17 @@ export function Modal({
       onMouseDown={(e) => { pressedBack.current = e.target === e.currentTarget; }}
       onClick={onBackClick}
     >
-      <div className={`modal${wide ? " lg" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`modal${wide ? " lg" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+      >
         <div className="modal-head">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button className="x" onClick={onClose} aria-label="Close">
             ×
           </button>

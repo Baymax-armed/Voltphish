@@ -18,6 +18,7 @@ export default function CampaignDetail() {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [nowTick, setNowTick] = useState(0); // re-renders the "updated Xs ago" label
   const [auto, setAuto] = useState(true);
   const [launchOpen, setLaunchOpen] = useState(false);
   const [trainOpen, setTrainOpen] = useState<string>("");
@@ -44,6 +45,12 @@ export default function CampaignDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cid]);
+
+  // Tick every 5s so the "updated Xs ago" label stays current even when paused.
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick((t) => t + 1), 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // A campaign only produces new events while it's live; once it's completed
   // (or a draft/errored), polling would just hammer the server for nothing.
@@ -90,9 +97,9 @@ export default function CampaignDetail() {
           </h1>
         </div>
         <div className="btn-row" style={{ alignItems: "center" }}>
-          <span className="updated">
+          <span className="updated" title={updatedAt ? updatedAt.toLocaleTimeString() : ""}>
             {auto && isLive && <span className="live-dot" title="live" />}
-            {updatedAt ? `updated ${updatedAt.toLocaleTimeString()}` : ""}
+            {agoLabel(updatedAt, nowTick)}
           </span>
           <button className="btn" onClick={() => load(true)} disabled={refreshing} title="Refresh now">
             <span className={refreshing ? "spin" : ""}>⟳</span> Refresh
@@ -259,6 +266,14 @@ export default function CampaignDetail() {
       </div>
     </>
   );
+}
+
+function agoLabel(d: Date | null, _tick: number): string {
+  if (!d) return "";
+  const s = Math.round((Date.now() - d.getTime()) / 1000);
+  if (s < 5) return "updated just now";
+  if (s < 60) return `updated ${s}s ago`;
+  return `updated ${Math.round(s / 60)}m ago`;
 }
 
 function eventBadge(type: string): string {

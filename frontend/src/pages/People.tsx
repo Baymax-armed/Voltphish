@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { Person } from "../types";
 import { Empty, ListSkeleton, fmtDate } from "../components/ui";
@@ -81,7 +82,13 @@ export default function People() {
 
       {people.length === 0 ? (
         <div className="card">
-          <Empty>No recipients yet. Launch a campaign and results will show up here.</Empty>
+          <Empty>
+            <div style={{ fontSize: 34, marginBottom: 6 }} aria-hidden="true">👥</div>
+            No recipients yet — launch a campaign and everyone you target will show up here with a risk score.
+            <div style={{ marginTop: 16 }}>
+              <Link className="btn primary" to="/campaigns">+ New campaign</Link>
+            </div>
+          </Empty>
         </div>
       ) : (
         <>
@@ -121,7 +128,7 @@ export default function People() {
                           <span className="mono" style={{ color: "var(--text-muted)" }}>{p.email}</span>
                         </div>
                       </td>
-                      <td><span className={`risk ${p.risk}`}>{p.risk}</span></td>
+                      <td><span className={`risk ${p.risk}`} aria-label={`${p.risk} risk`}>{p.risk}</span></td>
                       <td style={{ fontVariantNumeric: "tabular-nums" }}>{p.targeted}</td>
                       <td style={{ fontVariantNumeric: "tabular-nums" }}>{p.opened}</td>
                       <td style={{ fontVariantNumeric: "tabular-nums", color: p.clicked ? "var(--violet)" : undefined }}>{p.clicked}</td>

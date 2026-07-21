@@ -530,8 +530,12 @@ textarea { resize: vertical; min-height: 90px; font-family: var(--mono); font-si
   border: 1px solid var(--border); background: linear-gradient(180deg, var(--bg-elevated), var(--bg-panel));
   max-width: 380px; box-shadow: var(--shadow-lg);
 }
+.toast { display: flex; align-items: center; gap: 10px; }
+.toast-ico { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 800; flex: none; color: #fff; }
 .toast.error { border-color: color-mix(in srgb, var(--bad) 50%, var(--border)); color: var(--bad); }
+.toast.error .toast-ico { background: var(--bad); }
 .toast.ok { border-color: color-mix(in srgb, var(--good) 50%, var(--border)); color: var(--good); }
+.toast.ok .toast-ico { background: var(--good); }
 .banner {
   background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel));
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));

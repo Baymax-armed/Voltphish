@@ -131,10 +131,12 @@ export function DialogHost() {
           </>
         )}
         <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 20 }}>
-          <button className="btn" onClick={cancel}>
+          {/* For a destructive action the safe (Cancel) button is the default
+              focus target — the dangerous button is never focused by default. */}
+          <button className="btn" onClick={cancel} autoFocus={danger}>
             {state.kind === "confirm" ? state.cancelLabel ?? "Cancel" : "Cancel"}
           </button>
-          <button className={`btn ${danger ? "danger-solid" : "primary"}`} onClick={accept} autoFocus>
+          <button className={`btn ${danger ? "danger-solid" : "primary"}`} onClick={accept} autoFocus={!danger}>
             {state.confirmLabel ?? "OK"}
           </button>
         </div>

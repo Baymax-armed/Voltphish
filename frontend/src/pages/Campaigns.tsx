@@ -243,6 +243,17 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
     else setExcludeIds(upd);
   };
 
+  // Arrow-key roving focus within a chip group (a11y).
+  const onChipKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
+    const btns = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+    const idx = btns.indexOf(document.activeElement as HTMLButtonElement);
+    if (idx < 0) return;
+    e.preventDefault();
+    const fwd = e.key === "ArrowRight" || e.key === "ArrowDown";
+    btns[(idx + (fwd ? 1 : -1) + btns.length) % btns.length].focus();
+  };
+
   const refreshTunnel = () => {
     api.getTunnel().then((t) => {
       setTunnel(t);
@@ -392,7 +403,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                     <label>
                       Target groups <span className="hint">pick one or more — combined &amp; deduped by email</span>
                     </label>
-                    <div className="btn-row" style={{ flexWrap: "wrap" }}>
+                    <div className="btn-row" style={{ flexWrap: "wrap" }} role="group" aria-label="Target groups" onKeyDown={onChipKey}>
                       {groups.map((g) => (
                         <button
                           type="button"
@@ -411,7 +422,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                       <label>
                         Exclude / never-phish <span className="hint">execs, recent leavers, opt-outs — removed from the send</span>
                       </label>
-                      <div className="btn-row" style={{ flexWrap: "wrap" }}>
+                      <div className="btn-row" style={{ flexWrap: "wrap" }} role="group" aria-label="Exclude groups" onKeyDown={onChipKey}>
                         {groups.map((g) => (
                           <button
                             type="button"

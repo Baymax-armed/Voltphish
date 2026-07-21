@@ -17,7 +17,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ notify }}>
       {children}
-      {toast && <div className={`toast ${toast.kind}`}>{toast.message}</div>}
+      {toast && (
+        <div
+          className={`toast ${toast.kind}`}
+          role={toast.kind === "error" ? "alert" : "status"}
+          aria-live={toast.kind === "error" ? "assertive" : "polite"}
+        >
+          <span className="toast-ico" aria-hidden="true">{toast.kind === "error" ? "✕" : "✓"}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </Ctx.Provider>
   );
 }

@@ -14,6 +14,11 @@ tunnel is down or misconfigured."""
 from __future__ import annotations
 
 import logging
+import os
+import shutil
+import socket
+import subprocess
+import threading
 import time
 
 import httpx
@@ -24,6 +29,103 @@ log = logging.getLogger("voltphish.tunnel")
 
 _CACHE_TTL = 15.0  # seconds
 _cache: tuple[float, str | None] = (0.0, None)
+
+# ── App-managed per-campaign quick tunnels ──────────────────────────────────
+# When the cloudflared binary is bundled, the app can spawn a dedicated quick
+# tunnel per campaign so every new/cloned campaign gets its OWN public URL (a
+# separate process = a separate …trycloudflare.com hostname, all valid at once).
+# Bounded so a runaway can't spawn unlimited processes; tunnels are in-memory
+# and do NOT survive an app restart (an inherent quick-tunnel limitation).
+_MAX_TUNNELS = 8
+_APP_ORIGIN = "http://127.0.0.1:8080"
+_mlock = threading.Lock()
+_tunnels: dict[int, dict] = {}  # campaign_id -> {"proc", "url", "port"}
+
+
+def _cloudflared_bin() -> str | None:
+    return shutil.which("cloudflared") or (
+        "/usr/local/bin/cloudflared" if os.path.exists("/usr/local/bin/cloudflared") else None
+    )
+
+
+def managed_available() -> bool:
+    """True when the app can spawn its own per-campaign tunnels."""
+    return _cloudflared_bin() is not None
+
+
+def _free_port() -> int:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def _read_hostname(port: int, timeout: float = 25.0) -> str | None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            r = httpx.get(f"http://127.0.0.1:{port}/quicktunnel", timeout=2.0)
+            if r.status_code == 200:
+                host = (r.json() or {}).get("hostname", "").strip()
+                if host:
+                    return host
+        except Exception:  # noqa: BLE001 — cloudflared not ready yet
+            pass
+        time.sleep(0.7)
+    return None
+
+
+def _stop_locked(campaign_id: int) -> None:
+    t = _tunnels.pop(campaign_id, None)
+    if t:
+        try:
+            t["proc"].terminate()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def spawn_campaign_tunnel(campaign_id: int) -> str | None:
+    """Start a dedicated quick tunnel for a campaign and return its public URL,
+    or None if unavailable/failed. Reuses an existing one for the campaign."""
+    binpath = _cloudflared_bin()
+    if not binpath:
+        return None
+    with _mlock:
+        existing = _tunnels.get(campaign_id)
+        if existing:
+            return existing["url"]
+        if len(_tunnels) >= _MAX_TUNNELS:
+            _stop_locked(next(iter(_tunnels)))  # reap oldest
+        port = _free_port()
+        try:
+            proc = subprocess.Popen(
+                [binpath, "tunnel", "--no-autoupdate", "--url", _APP_ORIGIN, "--metrics", f"127.0.0.1:{port}"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        except Exception:  # noqa: BLE001
+            log.exception("failed to spawn cloudflared")
+            return None
+
+    host = _read_hostname(port)  # slow — done outside the lock
+    if not host:
+        try:
+            proc.terminate()
+        except Exception:  # noqa: BLE001
+            pass
+        log.warning("cloudflared did not report a hostname for campaign %s", campaign_id)
+        return None
+
+    url = f"https://{host}"
+    with _mlock:
+        _tunnels[campaign_id] = {"proc": proc, "url": url, "port": port}
+    log.info("spawned per-campaign tunnel for %s: %s", campaign_id, url)
+    return url
+
+
+def stop_campaign_tunnel(campaign_id: int) -> None:
+    with _mlock:
+        _stop_locked(campaign_id)
 
 
 def detect_public_url(*, force: bool = False) -> str | None:

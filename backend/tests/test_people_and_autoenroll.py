@@ -121,11 +121,14 @@ def test_create_campaign_rejects_bad_autoenroll_module(auth_client: TestClient) 
 
 
 def test_tunnel_status_graceful_when_unconfigured(auth_client: TestClient) -> None:
-    # No VOLTPHISH_TUNNEL_METRICS_URL in tests → feature reports off, never errors.
+    # No VOLTPHISH_TUNNEL_METRICS_URL in tests → shared tunnel reports off, never
+    # errors. `managed` reflects whether the cloudflared binary is present.
     r = auth_client.get("/api/v1/tunnel")
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body == {"configured": False, "url": None}
+    assert body["configured"] is False
+    assert body["url"] is None
+    assert "managed" in body and isinstance(body["managed"], bool)
 
 
 def test_people_aggregates_and_risk(auth_client: TestClient) -> None:

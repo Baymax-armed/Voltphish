@@ -154,7 +154,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [modules, setModules] = useState<TrainingModule[]>([]);
-  const [tunnel, setTunnel] = useState<{ configured: boolean; url: string | null } | null>(null);
+  const [tunnel, setTunnel] = useState<{ configured: boolean; url: string | null; managed: boolean } | null>(null);
   const [urlMode, setUrlMode] = useState<"tunnel" | "server" | "custom">("server");
   const [groupIds, setGroupIds] = useState<number[]>([]);
   const [excludeIds, setExcludeIds] = useState<number[]>([]);
@@ -213,14 +213,16 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
     // URL rather than reusing the original campaign's (possibly stale) one.
     api.getTunnel().then((t) => {
       setTunnel(t);
-      if (t.url) {
+      if (t.managed || t.url) {
+        // Default to a public link. Managed = a fresh dedicated URL is minted
+        // for this campaign on create (so every new/cloned campaign is distinct).
         setUrlMode("tunnel");
-        setF((prev) => ({ ...prev, phish_url: t.url! }));
+        if (t.url) setF((prev) => ({ ...prev, phish_url: t.url! }));
       } else if (prefill?.phish_url && !prefill.phish_url.includes("localhost")) {
         setUrlMode("custom");
         setF((prev) => ({ ...prev, phish_url: prefill.phish_url }));
       }
-    }).catch(() => setTunnel({ configured: false, url: null }));
+    }).catch(() => setTunnel({ configured: false, url: null, managed: false }));
   }, []);
 
   // Live "X recipients (Y excluded, Z dupes removed)" preview (NG-001).
@@ -278,6 +280,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
         exclude_group_ids: excludeIds,
         page_id: f.page_id || null,
         phish_url: f.phish_url,
+        fresh_tunnel: urlMode === "tunnel" && !!tunnel?.managed,
         redirect_url: f.redirect_url || null,
         launch_at: f.launch_at ? new Date(f.launch_at).toISOString() : null,
         send_by_at: f.send_by_at ? new Date(f.send_by_at).toISOString() : null,
@@ -417,7 +420,9 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
               Phishing URL <span className="hint">where recipients' links open</span>
             </label>
             <select value={urlMode} onChange={(e) => pickUrlMode(e.target.value as "tunnel" | "server" | "custom")}>
-              {tunnel?.url && <option value="tunnel">🌐 Public link — {tunnel.url}</option>}
+              {tunnel?.managed
+                ? <option value="tunnel">🌐 New public link — a fresh URL for this campaign</option>
+                : tunnel?.url && <option value="tunnel">🌐 Public link — {tunnel.url}</option>}
               <option value="server">🖥 This server — {window.location.origin}</option>
               <option value="custom">✏️ Custom URL…</option>
             </select>
@@ -430,22 +435,22 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                 required
               />
             )}
-            {urlMode === "tunnel" && tunnel?.url && (
+            {urlMode === "tunnel" && tunnel?.managed && (
               <span className="hint" style={{ marginTop: 6, display: "block" }}>
-                Links open at <span className="mono">{tunnel.url}</span> — a free public URL, no domain needed.
-                To mint a <strong>fresh</strong> URL, restart the tunnel (<span className="mono">docker compose restart cloudflared</span>), then{" "}
+                A <strong>fresh, dedicated</strong> <span className="mono">…trycloudflare.com</span> URL is created for this
+                campaign when you save — so every new or cloned campaign gets its own. (It lives while the app runs; free
+                quick tunnels don't survive a restart.)
+              </span>
+            )}
+            {urlMode === "tunnel" && !tunnel?.managed && tunnel?.url && (
+              <span className="hint" style={{ marginTop: 6, display: "block" }}>
+                Links open at <span className="mono">{tunnel.url}</span> — a free public URL, no domain needed.{" "}
                 <button type="button" className="linklike" onClick={refreshTunnel} style={{ padding: 0 }}>↻ re-check</button>.
               </span>
             )}
             {urlMode === "server" && f.phish_url.includes("localhost") && (
               <span className="hint" style={{ marginTop: 6, display: "block", color: "var(--bad)" }}>
                 ⚠ localhost only opens on this machine — recipients won't be able to reach it. Use a public link.
-              </span>
-            )}
-            {tunnel?.configured && !tunnel.url && (
-              <span className="hint" style={{ marginTop: 6, display: "block" }}>
-                A Cloudflare Tunnel is configured but not running. Start it with{" "}
-                <span className="mono">docker compose --profile tunnel up -d</span>.
               </span>
             )}
           </div>

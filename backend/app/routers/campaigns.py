@@ -154,6 +154,22 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "A campaign with that name already exists")
     db.refresh(campaign)
+
+    # A fresh, dedicated public URL for THIS campaign (every new/cloned campaign
+    # gets its own). Best-effort: if the tunnel can't be spawned, keep the URL
+    # the client chose (shared tunnel / this server / custom).
+    if payload.fresh_tunnel:
+        from ..services.tunnel import managed_available, spawn_campaign_tunnel
+
+        if managed_available():
+            url = spawn_campaign_tunnel(campaign.id)
+            if url:
+                campaign.phish_url = url
+                db.commit()
+                db.refresh(campaign)
+            else:
+                log.warning("fresh_tunnel requested but spawn failed for campaign %s", campaign.id)
+
     record_event(db, campaign_id=campaign.id, rid=None, type=EventType.campaign_created)
     db.commit()
     return campaign
@@ -359,4 +375,8 @@ def delete_campaign(campaign_id: int, db: DbSession = Depends(get_db)) -> Messag
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaign not found")
     db.delete(campaign)
     db.commit()
+    # Free this campaign's dedicated tunnel process, if any.
+    from ..services.tunnel import stop_campaign_tunnel
+
+    stop_campaign_tunnel(campaign_id)
     return Message(detail="Campaign deleted")

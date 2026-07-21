@@ -22,6 +22,14 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# cloudflared — lets the app spin up a fresh public quick-tunnel PER campaign,
+# so every new/cloned campaign gets its own distinct https://…trycloudflare.com
+# URL (each is a separate process/hostname, valid simultaneously).
+# NOTE: pin to a release tag/SHA in a hardened deploy (A06); 'latest' kept here
+# for build simplicity.
+ADD https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 /usr/local/bin/cloudflared
+RUN chmod 0755 /usr/local/bin/cloudflared
+
 COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 

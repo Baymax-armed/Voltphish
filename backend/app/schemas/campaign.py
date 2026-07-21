@@ -24,6 +24,9 @@ class CampaignCreate(BaseModel):
     exclude_group_ids: list[int] = Field(default_factory=list)
     page_id: int | None = None
     phish_url: AnyHttpUrl
+    # NG/tunnel: spawn a fresh dedicated public URL for THIS campaign (overrides
+    # phish_url with the new …trycloudflare.com hostname when available).
+    fresh_tunnel: bool = False
     redirect_url: AnyHttpUrl | None = None
     launch_at: datetime | None = None
     # Optional drip window end: messages are spread across [launch_at, send_by_at].

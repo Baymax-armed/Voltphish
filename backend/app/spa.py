@@ -1,6 +1,6 @@
 """Serve the built React admin SPA from the backend (single-process deploy).
 
-The compiled frontend lives at PHISHSIM_STATIC_DIR (default: ../frontend/dist,
+The compiled frontend lives at VOLTPHISH_STATIC_DIR (default: ../frontend/dist,
 or /app/static in Docker). Hashed asset files are served directly; any other
 non-API, non-tracking path falls back to index.html so client-side routing works
 on deep links / refresh.
@@ -18,11 +18,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-log = logging.getLogger("phishsim.spa")
+log = logging.getLogger("voltphish.spa")
 
 
 def _static_dir() -> Path:
-    env = os.environ.get("PHISHSIM_STATIC_DIR")
+    env = os.environ.get("VOLTPHISH_STATIC_DIR")
     if env:
         return Path(env)
     # default: repo-relative frontend/dist

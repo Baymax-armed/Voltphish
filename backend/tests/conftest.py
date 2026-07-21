@@ -8,15 +8,15 @@ import tempfile
 import pytest
 
 # Configure the app via env BEFORE importing it (settings are cached).
-_TMP = tempfile.mkdtemp(prefix="phishsim-test-")
+_TMP = tempfile.mkdtemp(prefix="voltphish-test-")
 os.environ.update(
-    PHISHSIM_ENV="development",
-    PHISHSIM_SECRET_KEY="test-secret-key-at-least-16-chars-long-xxxxxx",
-    PHISHSIM_DATABASE_URL=f"sqlite+pysqlite:///{_TMP}/test.db".replace("\\", "/"),
-    PHISHSIM_MAIL_BACKEND="console",
-    PHISHSIM_MAIL_OUTBOX=f"{_TMP}/outbox",
-    PHISHSIM_PHISH_BASE_URL="http://testserver",
-    PHISHSIM_COOKIE_SECURE="false",
+    VOLTPHISH_ENV="development",
+    VOLTPHISH_SECRET_KEY="test-secret-key-at-least-16-chars-long-xxxxxx",
+    VOLTPHISH_DATABASE_URL=f"sqlite+pysqlite:///{_TMP}/test.db".replace("\\", "/"),
+    VOLTPHISH_MAIL_BACKEND="console",
+    VOLTPHISH_MAIL_OUTBOX=f"{_TMP}/outbox",
+    VOLTPHISH_PHISH_BASE_URL="http://testserver",
+    VOLTPHISH_COOKIE_SECURE="false",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

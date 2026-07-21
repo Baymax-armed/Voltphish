@@ -25,7 +25,7 @@ from ..schemas.common import Message
 from ..schemas.user import PasswordReset, UserAdminOut, UserCreate, UserUpdate
 from ..security import hash_password
 
-log = logging.getLogger("phishsim.users")
+log = logging.getLogger("voltphish.users")
 
 router = APIRouter(
     prefix="/api/v1/users",

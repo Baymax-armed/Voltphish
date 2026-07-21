@@ -2,7 +2,7 @@
 
 Forms on the page post back to the tracking server, which records that a
 submission occurred. Per the project's ethical guardrail, submitted passwords
-are never stored (see phish/server.py and PHISHSIM_CAPTURE_PASSWORDS)."""
+are never stored (see phish/server.py and VOLTPHISH_CAPTURE_PASSWORDS)."""
 from __future__ import annotations
 
 from datetime import datetime

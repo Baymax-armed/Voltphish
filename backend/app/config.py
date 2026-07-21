@@ -26,7 +26,7 @@ class MailBackend(str, Enum):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="PHISHSIM_",
+        env_prefix="VOLTPHISH_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     env: Environment = Environment.development
     secret_key: str = _INSECURE_SECRET
-    database_url: str = "sqlite+pysqlite:///./phishsim.db"
+    database_url: str = "sqlite+pysqlite:///./voltphish.db"
 
     admin_host: str = "127.0.0.1"
     admin_port: int = 8080
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
         # default key. We can't see `env` reliably here (field order), so we
         # re-check in `get_settings()` where the full object exists.
         if len(v) < 16:
-            raise ValueError("PHISHSIM_SECRET_KEY must be at least 16 characters")
+            raise ValueError("VOLTPHISH_SECRET_KEY must be at least 16 characters")
         return v
 
 
@@ -88,12 +88,12 @@ def get_settings() -> Settings:
     settings = Settings()
     if settings.is_production and settings.secret_key == _INSECURE_SECRET:
         raise RuntimeError(
-            "Refusing to start in production with the default PHISHSIM_SECRET_KEY. "
+            "Refusing to start in production with the default VOLTPHISH_SECRET_KEY. "
             "Generate one, e.g. `python -c \"import secrets;print(secrets.token_urlsafe(48))\"`."
         )
     if settings.is_production and not settings.cookie_secure:
         raise RuntimeError(
-            "Refusing to start in production with PHISHSIM_COOKIE_SECURE=false. "
+            "Refusing to start in production with VOLTPHISH_COOKIE_SECURE=false. "
             "Session cookies must be Secure over HTTPS."
         )
     return settings

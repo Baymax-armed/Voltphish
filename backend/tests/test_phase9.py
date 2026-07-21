@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 def test_sms_profile_console_and_test(auth_client: TestClient) -> None:
     p = auth_client.post(
         "/api/v1/sms-profiles",
-        json={"name": "Console SMS", "provider": "console", "from_number": "PhishSim"},
+        json={"name": "Console SMS", "provider": "console", "from_number": "VoltPhish"},
     )
     assert p.status_code == 201, p.text
     pid = p.json()["id"]

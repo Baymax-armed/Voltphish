@@ -12,7 +12,7 @@ import logging
 
 import httpx
 
-log = logging.getLogger("phishsim.geoip")
+log = logging.getLogger("voltphish.geoip")
 
 _cache: dict[str, dict] = {}
 

@@ -1,4 +1,4 @@
-"""SQLAlchemy models for PhishSim."""
+"""SQLAlchemy models for VoltPhish."""
 from .apikey import ApiKey
 from .attachment import Attachment
 from .base import utcnow

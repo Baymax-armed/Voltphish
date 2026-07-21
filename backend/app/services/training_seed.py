@@ -14,7 +14,7 @@ from ..database import SessionLocal
 from ..models import Difficulty, QuizQuestion, TrainingModule
 from ..models.base import utcnow
 
-log = logging.getLogger("phishsim.training")
+log = logging.getLogger("voltphish.training")
 
 
 def _p(*paras: str) -> str:

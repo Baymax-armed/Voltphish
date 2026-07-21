@@ -134,11 +134,11 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const [pwOpen, setPwOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("phishsim-sidebar") === "1");
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("voltphish-sidebar") === "1");
   const location = useLocation();
 
   useEffect(() => {
-    localStorage.setItem("phishsim-sidebar", collapsed ? "1" : "0");
+    localStorage.setItem("voltphish-sidebar", collapsed ? "1" : "0");
   }, [collapsed]);
 
   // Scroll the content area to top on route change.

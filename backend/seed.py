@@ -1,8 +1,8 @@
 """Create the initial admin user from env, idempotently.
 
 Usage:
-    PHISHSIM_BOOTSTRAP_ADMIN_EMAIL=you@example.com \
-    PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD='<strong password>' \
+    VOLTPHISH_BOOTSTRAP_ADMIN_EMAIL=you@example.com \
+    VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD='<strong password>' \
     python seed.py
 
 Fails closed if no password is provided (CLAUDE.md §0.3) — we never create an
@@ -29,7 +29,7 @@ def main() -> int:
 
     if not password or len(password) < MIN_PASSWORD_LEN:
         print(
-            f"Refusing to seed: set PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD to a value "
+            f"Refusing to seed: set VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD to a value "
             f"of at least {MIN_PASSWORD_LEN} characters.",
             file=sys.stderr,
         )

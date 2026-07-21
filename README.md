@@ -36,12 +36,12 @@ docker compose up --build
 1. Open **http://localhost:8080**
 2. Grab the first-run admin password from the logs:
    ```bash
-   docker compose logs phishsim | grep -A3 "first-run"
+   docker compose logs voltphish | grep -A3 "first-run"
    ```
-   (or set `PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD` in `docker-compose.yml` to choose your own.)
-3. Sign in, set a new password, and go. With the default **console** mail backend, launching a campaign writes each email as a `.eml` file to the data volume instead of sending — so you can walk the whole open → click → submit → teach flow with **zero real email**. Switch `PHISHSIM_MAIL_BACKEND=smtp` and add a Sending Profile to deliver for real (against hosts you're authorized to test).
+   (or set `VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD` in `docker-compose.yml` to choose your own.)
+3. Sign in, set a new password, and go. With the default **console** mail backend, launching a campaign writes each email as a `.eml` file to the data volume instead of sending — so you can walk the whole open → click → submit → teach flow with **zero real email**. Switch `VOLTPHISH_MAIL_BACKEND=smtp` and add a Sending Profile to deliver for real (against hosts you're authorized to test).
 
-Data (SQLite + outbox) persists in the `phishsim-data` volume. Use `docker compose up -d` to keep it — **not** `down -v`, which wipes the volume.
+Data (SQLite + outbox) persists in the `voltphish-data` volume. Use `docker compose up -d` to keep it — **not** `down -v`, which wipes the volume.
 
 ## ✨ Features
 

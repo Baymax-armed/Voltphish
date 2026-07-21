@@ -248,7 +248,7 @@ function WebhookForm({
                 : "(https recommended; no internal addresses)"}
             </span>
           </label>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/hooks/phishsim" required />
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/hooks/voltphish" required />
           {format === "teams" && (
             <span className="hint" style={{ marginTop: 6, display: "block" }}>
               In Teams: channel <strong>···</strong> → <strong>Workflows</strong> → search <em>webhook</em> → pick{" "}

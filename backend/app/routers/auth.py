@@ -39,7 +39,7 @@ from ..services import totp as totp_svc
 from ..services.totp import verify as totp_verify
 from pydantic import BaseModel, Field as PField
 
-log = logging.getLogger("phishsim.auth")
+log = logging.getLogger("voltphish.auth")
 settings = get_settings()
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

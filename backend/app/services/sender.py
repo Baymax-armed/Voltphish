@@ -16,7 +16,7 @@ from ..models import Campaign, CampaignStatus, Result, ResultStatus, utcnow
 from ..security import new_result_id, new_short_code
 from .queue import enqueue
 
-log = logging.getLogger("phishsim.sender")
+log = logging.getLogger("voltphish.sender")
 
 
 def _existing_results(db: DbSession, campaign_id: int) -> list[Result]:

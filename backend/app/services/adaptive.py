@@ -27,7 +27,7 @@ from ..models import (
 )
 from ..models.base import utcnow
 
-log = logging.getLogger("phishsim.adaptive")
+log = logging.getLogger("voltphish.adaptive")
 
 _K_ENABLED = "train_autoenroll_enabled"
 _K_MODE = "train_autoenroll_mode"       # adaptive | fixed

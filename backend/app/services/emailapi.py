@@ -16,7 +16,7 @@ import httpx
 from ..models import SendingProfile
 from ..security import decrypt_secret
 
-log = logging.getLogger("phishsim.emailapi")
+log = logging.getLogger("voltphish.emailapi")
 
 _TIMEOUT = 20.0
 

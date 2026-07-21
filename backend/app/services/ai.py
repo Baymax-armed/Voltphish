@@ -22,7 +22,7 @@ import httpx
 
 from ..config import get_settings
 
-log = logging.getLogger("phishsim.ai")
+log = logging.getLogger("voltphish.ai")
 
 _SYSTEM = (
     "You are a content generator for an AUTHORIZED internal security-awareness "

@@ -19,7 +19,7 @@ from .models import User, UserRole
 from .models import utcnow
 from .security import hash_token
 
-SESSION_COOKIE = "phishsim_session"
+SESSION_COOKIE = "voltphish_session"
 settings = get_settings()
 
 

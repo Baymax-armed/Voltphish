@@ -17,7 +17,7 @@ from ..database import SessionLocal
 from ..models import Campaign, CampaignStatus, utcnow
 from .sender import enqueue_campaign
 
-log = logging.getLogger("phishsim.scheduler")
+log = logging.getLogger("voltphish.scheduler")
 
 _TICK_SECONDS = 15
 

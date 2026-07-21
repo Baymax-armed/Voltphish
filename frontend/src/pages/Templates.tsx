@@ -669,7 +669,7 @@ function AiGenerateModal({
         </select>
       </div>
       <div className="hint" style={{ marginBottom: 14 }}>
-        Requires the server to have an AI API key configured (PHISHSIM_AI_API_KEY). The draft
+        Requires the server to have an AI API key configured (VOLTPHISH_AI_API_KEY). The draft
         replaces the current subject and body — you can edit before saving.
       </div>
       <div className="btn-row" style={{ justifyContent: "flex-end" }}>

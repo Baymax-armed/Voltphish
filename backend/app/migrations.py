@@ -19,7 +19,7 @@ from sqlalchemy import inspect
 from .config import get_settings
 from .database import engine
 
-log = logging.getLogger("phishsim.migrations")
+log = logging.getLogger("voltphish.migrations")
 
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 

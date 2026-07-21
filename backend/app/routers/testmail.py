@@ -19,7 +19,7 @@ from ..services.handlers import build_attachments
 from ..services.mailer import OutgoingEmail, friendly_smtp_error, profile_headers, send_email
 from ..services.renderer import RenderContext, render_html, render_subject, render_text
 
-log = logging.getLogger("phishsim.testmail")
+log = logging.getLogger("voltphish.testmail")
 settings = get_settings()
 
 router = APIRouter(

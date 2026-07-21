@@ -29,7 +29,7 @@ from .queue import register
 from .renderer import RenderContext, render_html, render_subject, render_text
 from .ssrf import SsrfError, validate_url
 
-log = logging.getLogger("phishsim.handlers")
+log = logging.getLogger("voltphish.handlers")
 settings = get_settings()
 
 _TERMINAL_DELIVERED = {

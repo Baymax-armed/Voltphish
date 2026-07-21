@@ -1,4 +1,4 @@
-"""PhishSim application entrypoint.
+"""VoltPhish application entrypoint.
 
 Mounts, on one app:
   - the authenticated admin API under /api/v1/*
@@ -47,7 +47,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-log = logging.getLogger("phishsim")
+log = logging.getLogger("voltphish")
 settings = get_settings()
 
 @asynccontextmanager

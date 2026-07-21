@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export type Theme = "dark" | "light";
 
-const KEY = "phishsim-theme";
+const KEY = "voltphish-theme";
 
 function apply(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);

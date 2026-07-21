@@ -19,7 +19,7 @@ from sqlalchemy import select, update
 from ..database import SessionLocal
 from ..models import Job, JobStatus, utcnow
 
-log = logging.getLogger("phishsim.queue")
+log = logging.getLogger("voltphish.queue")
 
 Handler = Callable[[dict], Awaitable[None]]
 _HANDLERS: dict[str, Handler] = {}

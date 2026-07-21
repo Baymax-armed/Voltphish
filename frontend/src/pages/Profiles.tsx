@@ -88,7 +88,7 @@ export default function Profiles() {
         <div className="banner" style={{ borderColor: "var(--warn)", color: "var(--warn)", background: "#2e2611" }}>
           ⚠️ <strong>DEV MODE (console backend):</strong> launching a campaign does <strong>NOT</strong> send real
           email — messages are written to <span className="mono">/data/outbox</span> as .eml files and everyone is
-          marked "sent". To actually deliver, set <span className="mono">PHISHSIM_MAIL_BACKEND=smtp</span> (in
+          marked "sent". To actually deliver, set <span className="mono">VOLTPHISH_MAIL_BACKEND=smtp</span> (in
           docker-compose.yml) and restart. <em>Verify</em> and <em>Send test</em> below always use real SMTP, so you
           can check your credentials regardless.
         </div>

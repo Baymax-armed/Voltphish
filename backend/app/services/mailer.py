@@ -25,7 +25,7 @@ from ..config import get_settings
 from ..models import SendingProfile
 from ..security import decrypt_secret
 
-log = logging.getLogger("phishsim.mailer")
+log = logging.getLogger("voltphish.mailer")
 settings = get_settings()
 
 SMTP_TIMEOUT_SECONDS = 30
@@ -87,7 +87,7 @@ async def _send_console(msg: OutgoingEmail) -> None:
     outbox.mkdir(parents=True, exist_ok=True)
     safe = msg.to_address.replace("@", "_at_").replace("/", "_").replace("\\", "_")
     # Path is confined to the outbox dir; filename derived from a validated email.
-    path = outbox / f"{safe}-{make_msgid(domain='phishsim')[1:12]}.eml"
+    path = outbox / f"{safe}-{make_msgid(domain='voltphish')[1:12]}.eml"
     path.write_bytes(bytes(_build_message(msg)))
     log.info("console mail written to %s", path)
 

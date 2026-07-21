@@ -1,9 +1,9 @@
 # One-command startup:  docker compose up --build
 # Then open http://localhost:8080  (first-run admin password is printed to logs).
 services:
-  phishsim:
+  voltphish:
     build: .
-    image: phishsim:latest
+    image: voltphish:latest
     ports:
       - "8080:8080"
     environment:
@@ -12,31 +12,31 @@ services:
       # never depend on the one-time generated password in the logs. When set,
       # there is no forced "change password" step. (Only applies on first run /
       # a fresh data volume — an existing admin's password is never overwritten.)
-      PHISHSIM_BOOTSTRAP_ADMIN_EMAIL: "admin@example.com"
-      # PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD: "choose-a-strong-password-min-12-chars"
+      VOLTPHISH_BOOTSTRAP_ADMIN_EMAIL: "admin@example.com"
+      # VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD: "choose-a-strong-password-min-12-chars"
 
       # ── Delivery ─────────────────────────────────────────────
       # Emails are delivered via the campaign's Sending Profile (real SMTP or an
       # Email API like Brevo/SendGrid). Create one under "Sending Profiles" and
       # use Verify + Send test to confirm it works.
-      PHISHSIM_MAIL_BACKEND: "smtp"
+      VOLTPHISH_MAIL_BACKEND: "smtp"
 
       # The public base URL recipients' tracking links resolve to.
       # For local testing this is fine; in a real test set it to the
       # authorized host recipients can reach.
-      PHISHSIM_PHISH_BASE_URL: "http://localhost:8080"
+      VOLTPHISH_PHISH_BASE_URL: "http://localhost:8080"
 
       # ── Production hardening (uncomment for a real deployment) ─
-      # PHISHSIM_ENV: "production"
-      # PHISHSIM_SECRET_KEY: "<64+ random chars>"
-      # PHISHSIM_COOKIE_SECURE: "true"   # requires serving over HTTPS
+      # VOLTPHISH_ENV: "production"
+      # VOLTPHISH_SECRET_KEY: "<64+ random chars>"
+      # VOLTPHISH_COOKIE_SECURE: "true"   # requires serving over HTTPS
     volumes:
       # All data (users, campaigns, DB) lives here and PERSISTS across restarts
       # and rebuilds. WARNING: `docker compose down -v` DELETES this volume and
       # everything in it (including your password). Use plain `docker compose
       # down` / `stop` / `restart` to keep your data.
-      - phishsim-data:/data
+      - voltphish-data:/data
     restart: unless-stopped
 
 volumes:
-  phishsim-data:
+  voltphish-data:

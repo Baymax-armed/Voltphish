@@ -11,7 +11,7 @@ Security notes:
 - These are intentionally public but do NOT trust the rid: unknown/invalid rids
   return a benign response and record nothing (no enumeration signal, A01/A09).
 - We NEVER store submitted passwords. By default we don't store any submitted
-  field values — only that a submission occurred (see PHISHSIM_CAPTURE_PASSWORDS).
+  field values — only that a submission occurred (see VOLTPHISH_CAPTURE_PASSWORDS).
 - No secrets, stack traces, or internal errors are exposed (§7).
 """
 from __future__ import annotations
@@ -34,7 +34,7 @@ from ..services.qr import qr_png
 from ..services.renderer import RenderContext, render_landing
 from ..services.tracker import click_url
 
-log = logging.getLogger("phishsim.phish")
+log = logging.getLogger("voltphish.phish")
 settings = get_settings()
 router = APIRouter(tags=["phish"], include_in_schema=False)
 

@@ -20,7 +20,7 @@ from ..services.inbound_report import ingest_report
 from ..services.ratelimit import RateLimiter
 from ..services.report_token import get_or_create_report_token
 
-log = logging.getLogger("phishsim.inbound")
+log = logging.getLogger("voltphish.inbound")
 router = APIRouter(prefix="/api/v1/inbound", tags=["inbound"])
 
 _report_limiter = RateLimiter(max_attempts=30, window_seconds=60)

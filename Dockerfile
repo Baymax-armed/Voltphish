@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# PhishSim — single-image build. Like Gophish, one container runs
+# VoltPhish — single-image build. Like Gophish, one container runs
 # the whole thing: the React admin UI is compiled and served by the
 # FastAPI backend. No separate frontend process.
 # ─────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ RUN npm run build          # -> /frontend/dist
 FROM python:3.12-slim AS runtime
 
 # Run as an unprivileged user (CLAUDE.md A05).
-RUN useradd --create-home --uid 10001 phishsim
+RUN useradd --create-home --uid 10001 voltphish
 WORKDIR /app
 
 COPY backend/requirements.txt ./
@@ -26,13 +26,13 @@ COPY backend/ ./
 COPY --from=frontend /frontend/dist ./static
 
 # Persist DB + mail outbox under /data (mount a volume here).
-ENV PHISHSIM_STATIC_DIR=/app/static \
-    PHISHSIM_DATABASE_URL=sqlite+pysqlite:////data/phishsim.db \
-    PHISHSIM_MAIL_OUTBOX=/data/outbox \
-    PHISHSIM_ENV=development
+ENV VOLTPHISH_STATIC_DIR=/app/static \
+    VOLTPHISH_DATABASE_URL=sqlite+pysqlite:////data/voltphish.db \
+    VOLTPHISH_MAIL_OUTBOX=/data/outbox \
+    VOLTPHISH_ENV=development
 
-RUN mkdir -p /data && chown -R phishsim:phishsim /data /app
-USER phishsim
+RUN mkdir -p /data && chown -R voltphish:voltphish /data /app
+USER voltphish
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=4s --start-period=8s \

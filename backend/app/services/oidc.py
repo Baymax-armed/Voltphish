@@ -24,7 +24,7 @@ from ..models import Setting
 from ..models.base import utcnow
 from ..security import decrypt_secret, encrypt_secret
 
-log = logging.getLogger("phishsim.oidc")
+log = logging.getLogger("voltphish.oidc")
 
 
 class OidcError(RuntimeError):

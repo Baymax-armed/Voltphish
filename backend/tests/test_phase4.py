@@ -131,10 +131,10 @@ def test_custom_headers_persist_and_reject_crlf(auth_client: TestClient) -> None
     ok = auth_client.post(
         "/api/v1/profiles",
         json={"name": "hdr prof", "from_address": "it@example.com", "host": "localhost", "port": 1025,
-              "headers": [{"key": "X-Mailer", "value": "PhishSim"}]},
+              "headers": [{"key": "X-Mailer", "value": "VoltPhish"}]},
     )
     assert ok.status_code == 201
-    assert ok.json()["headers"] == [{"key": "X-Mailer", "value": "PhishSim"}]
+    assert ok.json()["headers"] == [{"key": "X-Mailer", "value": "VoltPhish"}]
 
     # CRLF injection in a header is rejected by validation.
     bad = auth_client.post(

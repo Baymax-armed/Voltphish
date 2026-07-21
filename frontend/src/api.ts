@@ -202,7 +202,7 @@ export const api = {
   updateBenchmarkSettings: (p: Record<string, unknown>) => request<BenchmarkSettings>("PUT", "/settings/benchmark", p),
   getTimeline: () => request<TimelinePoint[]>("GET", "/dashboard/timeline"),
 
-  // AI template generator (optional; requires PHISHSIM_AI_API_KEY on the server)
+  // AI template generator (optional; requires VOLTPHISH_AI_API_KEY on the server)
   aiGenerateTemplate: (scenario: string, difficulty: string) =>
     request<AiTemplate>("POST", "/templates/ai-generate", { scenario, difficulty }),
 

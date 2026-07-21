@@ -17,7 +17,7 @@ from .ssrf import validate_url
 _MAX_BYTES = 3_000_000
 _TIMEOUT = 10.0
 _MAX_REDIRECTS = 3
-_UA = "Mozilla/5.0 (compatible; PhishSim-SiteImport/1.0)"
+_UA = "Mozilla/5.0 (compatible; VoltPhish-SiteImport/1.0)"
 
 
 class SiteImportError(ValueError):

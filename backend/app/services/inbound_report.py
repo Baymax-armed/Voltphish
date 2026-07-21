@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..models import EventType, ReportedEmail, ReportStatus, Result
 from .events import record_event
 
-log = logging.getLogger("phishsim.report")
+log = logging.getLogger("voltphish.report")
 
 # Same tracking tokens the IMAP poller matches: /c/{rid} /t/{rid}.png /a/{rid}.png
 # /q/{rid}.png /p/{rid} /r/{rid} /report?rid= /learn/{rid}, plus short links /s/.

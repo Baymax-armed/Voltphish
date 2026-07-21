@@ -25,7 +25,7 @@ from ..database import SessionLocal
 from ..models import EventType, Result
 from .events import record_event
 
-log = logging.getLogger("phishsim.imap")
+log = logging.getLogger("voltphish.imap")
 
 
 class ImapError(RuntimeError):

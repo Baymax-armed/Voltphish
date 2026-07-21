@@ -1,7 +1,7 @@
 """First-run admin bootstrap (Gophish-style).
 
 On startup, if there are no users, create an admin account:
-  - password from PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD if set, else a random one
+  - password from VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD if set, else a random one
     that is printed ONCE to the logs. This makes `docker compose up` usable
     immediately after clone with no manual seed step.
 
@@ -20,7 +20,7 @@ from .database import SessionLocal
 from .models import SendingProfile, User, UserRole
 from .security import hash_password
 
-log = logging.getLogger("phishsim.bootstrap")
+log = logging.getLogger("voltphish.bootstrap")
 
 
 def ensure_admin() -> None:
@@ -55,7 +55,7 @@ def ensure_admin() -> None:
                 "\n%s\n  VoltPhish first-run admin created\n"
                 "    email:    %s\n    password: %s\n"
                 "  ^ Shown ONCE. Log in and change it. Set "
-                "PHISHSIM_BOOTSTRAP_ADMIN_PASSWORD to choose your own.\n%s",
+                "VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD to choose your own.\n%s",
                 banner, email, password, banner,
             )
         else:
@@ -65,7 +65,7 @@ def ensure_admin() -> None:
 
 
 def ensure_dev_smtp_profile() -> None:
-    """If PHISHSIM_DEV_SMTP_HOST is set (e.g. the bundled Mailpit) and no sending
+    """If VOLTPHISH_DEV_SMTP_HOST is set (e.g. the bundled Mailpit) and no sending
     profiles exist yet, create a ready-to-use one so email works out of the box."""
     settings = get_settings()
     if not settings.dev_smtp_host:
@@ -77,7 +77,7 @@ def ensure_dev_smtp_profile() -> None:
         db.add(
             SendingProfile(
                 name="Local Mailpit (test)",
-                from_address="phishsim@example.com",
+                from_address="voltphish@example.com",
                 kind="smtp",
                 host=settings.dev_smtp_host,
                 port=settings.dev_smtp_port,

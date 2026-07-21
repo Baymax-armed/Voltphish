@@ -16,6 +16,7 @@ from .base import UTCDateTime, utcnow
 
 class EventType(str, enum.Enum):
     campaign_created = "campaign_created"
+    campaign_launched = "campaign_launched"
     email_sent = "email_sent"
     email_error = "email_error"
     email_opened = "email_opened"

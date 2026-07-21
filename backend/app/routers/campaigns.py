@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
+
+log = logging.getLogger("voltphish.campaigns")
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -22,6 +25,7 @@ from ..models import (
     ResultStatus,
     SendingProfile,
     Template,
+    User,
     utcnow,
 )
 from ..schemas.campaign import (
@@ -30,6 +34,7 @@ from ..schemas.campaign import (
     CampaignOut,
     CampaignStats,
     EventOut,
+    LaunchRequest,
     ResultOut,
 )
 from ..schemas.common import Message
@@ -180,7 +185,12 @@ def export_results_csv(campaign_id: int, db: DbSession = Depends(get_db)) -> Str
 
 
 @router.post("/{campaign_id}/launch", response_model=CampaignDetail)
-async def launch_campaign(campaign_id: int, db: DbSession = Depends(get_db)) -> CampaignDetail:
+async def launch_campaign(
+    campaign_id: int,
+    payload: LaunchRequest | None = None,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CampaignDetail:
     campaign = db.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Campaign not found")
@@ -190,12 +200,29 @@ async def launch_campaign(campaign_id: int, db: DbSession = Depends(get_db)) -> 
             f"Campaign cannot be launched from status '{campaign.status.value}'",
         )
 
+    # Governance gate (CLAUDE.md §9 audit; "Responsible use"): the operator must
+    # attest they're authorized to test these recipients. We record who launched
+    # and the authorization reference in an append-only audit event.
+    payload = payload or LaunchRequest()
+    if not payload.authorized:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "You must confirm you are authorized to test these recipients before launching.",
+        )
+    campaign.authorized_by = user.email
+    campaign.authorization_ref = (payload.authorization_ref or "").strip()[:500] or None
     campaign.launch_at = campaign.launch_at or utcnow()
+
+    record_event(
+        db, campaign_id=campaign.id, rid=None, type=EventType.campaign_launched,
+        details={"by": user.email, "authorization_ref": campaign.authorization_ref},
+    )
     # Enqueue durable per-recipient send jobs; the queue workers deliver them
     # (restart-safe, multi-worker-safe).
     enqueue_campaign(db, campaign)
     db.commit()
     db.refresh(campaign)
+    log.info("campaign %s launched by %s (auth_ref=%r)", campaign.id, user.email, campaign.authorization_ref)
     return _detail(campaign)
 
 

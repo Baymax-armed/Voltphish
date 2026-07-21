@@ -157,6 +157,8 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [launch, setLaunch] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [authRef, setAuthRef] = useState("");
 
   const [f, setF] = useState({
     name: "",
@@ -195,6 +197,10 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (launch && !scheduled && !authorized) {
+      notify("Confirm you're authorized to test these recipients before launching.", "error");
+      return;
+    }
     setBusy(true);
     try {
       const created = await api.createCampaign({
@@ -211,7 +217,7 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
       if (scheduled) {
         notify("Campaign scheduled");
       } else if (launch) {
-        await api.launchCampaign(created.id);
+        await api.launchCampaign(created.id, { authorized: true, authorization_ref: authRef.trim() });
         notify("Campaign launched");
       } else {
         notify("Campaign saved as draft");
@@ -340,6 +346,18 @@ function CampaignForm({ onClose }: { onClose: () => void }) {
               <input id="launch" type="checkbox" checked={launch} onChange={(e) => setLaunch(e.target.checked)} />
               <label htmlFor="launch">Launch immediately after creating</label>
             </div>
+          )}
+          {!scheduled && launch && (
+            <>
+              <div className="field">
+                <label>Authorization reference <span className="hint">(ticket / signed scope — audit-logged)</span></label>
+                <input value={authRef} onChange={(e) => setAuthRef(e.target.value)} placeholder="e.g. SEC-1234" />
+              </div>
+              <label className="field check" style={{ cursor: "pointer" }}>
+                <input type="checkbox" checked={authorized} onChange={(e) => setAuthorized(e.target.checked)} />
+                <span>I confirm I'm authorized to run this simulation against these recipients.</span>
+              </label>
+            </>
           )}
           <div className="btn-row" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="btn" onClick={onClose}>

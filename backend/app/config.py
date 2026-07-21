@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     env: Environment = Environment.development
     secret_key: str = _INSECURE_SECRET
     database_url: str = "sqlite+pysqlite:///./voltphish.db"
+    # Optional: when set (e.g. redis://redis:6379/0), rate limiting is shared
+    # across app instances so limits hold under horizontal scaling. Unset =
+    # single-node in-memory limiter (fine for one instance).
+    redis_url: str = ""
 
     admin_host: str = "127.0.0.1"
     admin_port: int = 8080

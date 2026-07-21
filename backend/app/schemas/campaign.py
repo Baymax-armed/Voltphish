@@ -7,6 +7,12 @@ from pydantic import AnyHttpUrl, BaseModel, Field, model_validator
 from ..models import CampaignStatus, ResultStatus
 
 
+class LaunchRequest(BaseModel):
+    # Operator must attest authorized scope before a campaign sends (governance).
+    authorized: bool = False
+    authorization_ref: str | None = Field(default=None, max_length=500)
+
+
 class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     template_id: int
@@ -56,6 +62,8 @@ class CampaignOut(BaseModel):
     page_id: int | None
     phish_url: str
     redirect_url: str | None
+    authorized_by: str | None = None
+    authorization_ref: str | None = None
     created_at: datetime
     launch_at: datetime | None
     send_by_at: datetime | None

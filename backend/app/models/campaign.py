@@ -37,6 +37,11 @@ class Campaign(Base):
     # (if set) or the built-in awareness page.
     page_id: Mapped[int | None] = mapped_column(ForeignKey("landing_pages.id"), nullable=True)
 
+    # Governance: recorded at launch — who authorized the test and a reference
+    # to the authorization (ticket / signed scope). Kept for the audit trail.
+    authorized_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    authorization_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Base URL recipients' clicks resolve to (the authorized test host).
     phish_url: Mapped[str] = mapped_column(String(500), nullable=False)
     # Where a clicked link ultimately lands (Phase 1: an external teaching page).

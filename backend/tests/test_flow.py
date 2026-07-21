@@ -103,7 +103,7 @@ def test_full_campaign_flow(auth_client: TestClient) -> None:
     campaign_id = camp["id"]
 
     # 5. Launch. Background send runs against the console backend.
-    launched = auth_client.post(f"/api/v1/campaigns/{campaign_id}/launch")
+    launched = auth_client.post(f"/api/v1/campaigns/{campaign_id}/launch", json={"authorized": True})
     assert launched.status_code == 200, launched.text
 
     # Poll until both emails are sent (background task).

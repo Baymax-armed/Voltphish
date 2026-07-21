@@ -1,0 +1,41 @@
+# Horizontal-scale / production-ish stack: Postgres + Redis instead of the
+# default single-node SQLite + in-memory limiter.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up --build
+#
+# The app is stateless, so you can scale the web tier:
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --scale voltphish=3
+# NOTE: run the background scheduler/workers on a single instance (or add leader
+# election) to avoid duplicate campaign scheduling across nodes.
+services:
+  voltphish:
+    environment:
+      VOLTPHISH_DATABASE_URL: "postgresql+psycopg://voltphish:voltphish@postgres:5432/voltphish"
+      VOLTPHISH_REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: voltphish
+      POSTGRES_PASSWORD: voltphish
+      POSTGRES_DB: voltphish
+    volumes:
+      - voltphish-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voltphish"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  voltphish-pg:

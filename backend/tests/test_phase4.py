@@ -41,7 +41,7 @@ def test_results_csv_export_and_injection_safety(auth_client: TestClient) -> Non
               "group_id": ids["grp"], "phish_url": "http://testserver"},
     ).json()
     # Launch so per-recipient result rows exist to export.
-    auth_client.post(f"/api/v1/campaigns/{camp['id']}/launch")
+    auth_client.post(f"/api/v1/campaigns/{camp['id']}/launch", json={"authorized": True})
     for _ in range(50):
         if auth_client.get(f"/api/v1/campaigns/{camp['id']}").json()["stats"]["total"] >= 1:
             break

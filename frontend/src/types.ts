@@ -455,6 +455,8 @@ export interface Campaign {
   page_id: number | null;
   phish_url: string;
   redirect_url: string | null;
+  authorized_by?: string | null;
+  authorization_ref?: string | null;
   created_at: string;
   launch_at: string | null;
   send_by_at: string | null;

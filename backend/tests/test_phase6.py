@@ -22,7 +22,7 @@ def test_report_query_alias(auth_client: TestClient) -> None:
     camp = auth_client.post("/api/v1/campaigns", json={
         "name": "r camp", "template_id": tpl["id"], "profile_id": prof["id"],
         "group_id": grp["id"], "phish_url": "http://testserver"}).json()
-    auth_client.post(f"/api/v1/campaigns/{camp['id']}/launch")
+    auth_client.post(f"/api/v1/campaigns/{camp['id']}/launch", json={"authorized": True})
 
     import time
     rid = None

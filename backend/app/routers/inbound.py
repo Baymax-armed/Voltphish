@@ -17,13 +17,13 @@ from sqlalchemy.orm import Session as DbSession
 from ..database import get_db
 from ..dependencies import client_ip
 from ..services.inbound_report import ingest_report
-from ..services.ratelimit import RateLimiter
+from ..services.ratelimit import make_rate_limiter
 from ..services.report_token import get_or_create_report_token
 
 log = logging.getLogger("voltphish.inbound")
 router = APIRouter(prefix="/api/v1/inbound", tags=["inbound"])
 
-_report_limiter = RateLimiter(max_attempts=30, window_seconds=60)
+_report_limiter = make_rate_limiter(max_attempts=30, window_seconds=60)
 
 
 class ReportIn(BaseModel):

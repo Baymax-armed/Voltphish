@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import type { CampaignDetail as Detail, EventItem } from "../types";
-import { Badge, CopyButton, DetailSkeleton, fmtDate } from "../components/ui";
+import { Badge, CopyButton, DetailSkeleton, Modal, fmtDate } from "../components/ui";
 import Donut from "../components/Donut";
 import { useToast } from "../components/Toast";
 
@@ -18,6 +18,7 @@ export default function CampaignDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [auto, setAuto] = useState(true);
+  const [launchOpen, setLaunchOpen] = useState(false);
   const timer = useRef<number | null>(null);
 
   const load = useCallback(
@@ -50,10 +51,11 @@ export default function CampaignDetail() {
     };
   }, [auto, load]);
 
-  const launch = async () => {
+  const doLaunch = async (authorization_ref: string) => {
     setBusy(true);
     try {
-      await api.launchCampaign(cid);
+      await api.launchCampaign(cid, { authorized: true, authorization_ref });
+      setLaunchOpen(false);
       notify("Campaign launched");
       await load(true);
     } catch (e) {
@@ -94,12 +96,14 @@ export default function CampaignDetail() {
             ⭳ CSV
           </a>
           {(c.status === "draft" || c.status === "scheduled") && (
-            <button className="btn primary" onClick={launch} disabled={busy}>
-              {busy ? "Launching…" : c.status === "scheduled" ? "▶ Launch now" : "▶ Launch"}
+            <button className="btn primary" onClick={() => setLaunchOpen(true)} disabled={busy}>
+              {c.status === "scheduled" ? "▶ Launch now" : "▶ Launch"}
             </button>
           )}
         </div>
       </div>
+
+      {launchOpen && <LaunchDialog busy={busy} onCancel={() => setLaunchOpen(false)} onConfirm={doLaunch} />}
 
       {c.status === "scheduled" && c.launch_at && (
         <div className="banner">
@@ -227,4 +231,33 @@ function eventBadge(type: string): string {
 function ridEmail(c: Detail, rid: string | null): string {
   if (!rid) return "—";
   return c.results.find((r) => r.rid === rid)?.email ?? rid;
+}
+
+function LaunchDialog({
+  busy, onCancel, onConfirm,
+}: { busy: boolean; onCancel: () => void; onConfirm: (ref: string) => void }) {
+  const [ref, setRef] = useState("");
+  const [ok, setOk] = useState(false);
+  return (
+    <Modal title="Confirm authorization to launch" onClose={onCancel}>
+      <div className="banner" style={{ marginTop: 0 }}>
+        ⚠️ Only launch against recipients you are <strong>authorized</strong> to test (your own org, or a client
+        engagement with signed scope). Sending simulated phishing to people without consent may be illegal.
+      </div>
+      <div className="field">
+        <label>Authorization reference <span className="hint">(ticket, scope doc, or approver — recorded in the audit log)</span></label>
+        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. SEC-1234 / signed scope 2026-07" />
+      </div>
+      <label className="field check" style={{ margin: "6px 0", cursor: "pointer" }}>
+        <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />
+        <span>I confirm I am authorized to run this simulation against these recipients.</span>
+      </label>
+      <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+        <button className="btn" onClick={onCancel}>Cancel</button>
+        <button className="btn primary" disabled={!ok || busy} onClick={() => onConfirm(ref.trim())}>
+          {busy ? "Launching…" : "Launch campaign"}
+        </button>
+      </div>
+    </Modal>
+  );
 }

@@ -34,7 +34,7 @@ from ..security import (
     new_session_token,
     verify_password,
 )
-from ..services.ratelimit import RateLimiter
+from ..services.ratelimit import make_rate_limiter
 from ..services import totp as totp_svc
 from ..services.totp import verify as totp_verify
 from pydantic import BaseModel, Field as PField
@@ -43,7 +43,7 @@ log = logging.getLogger("voltphish.auth")
 settings = get_settings()
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-_login_limiter = RateLimiter(
+_login_limiter = make_rate_limiter(
     max_attempts=settings.login_max_attempts,
     window_seconds=settings.login_window_seconds,
 )

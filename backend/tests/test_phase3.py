@@ -80,7 +80,7 @@ def test_custom_landing_page_capture(auth_client: TestClient) -> None:
     cid = camp["id"]
     assert camp["page_id"] == page["id"]
 
-    auth_client.post(f"/api/v1/campaigns/{cid}/launch")
+    auth_client.post(f"/api/v1/campaigns/{cid}/launch", json={"authorized": True})
     detail = _wait_sent(auth_client, cid)
     rid = detail["results"][0]["rid"]
 

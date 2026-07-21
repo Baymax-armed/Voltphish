@@ -239,7 +239,8 @@ export const api = {
   listCampaigns: () => request<Campaign[]>("GET", "/campaigns"),
   getCampaign: (id: number) => request<CampaignDetail>("GET", `/campaigns/${id}`),
   createCampaign: (c: Record<string, unknown>) => request<Campaign>("POST", "/campaigns", c),
-  launchCampaign: (id: number) => request<CampaignDetail>("POST", `/campaigns/${id}/launch`),
+  launchCampaign: (id: number, body: { authorized: boolean; authorization_ref?: string }) =>
+    request<CampaignDetail>("POST", `/campaigns/${id}/launch`, body),
   campaignEvents: (id: number) => request<EventItem[]>("GET", `/campaigns/${id}/events`),
   deleteCampaign: (id: number) => request<{ detail: string }>("DELETE", `/campaigns/${id}`),
 };

@@ -60,3 +60,65 @@ class RateLimiter:
         """Clear on successful auth."""
         with self._lock:
             self._buckets.pop(key, None)
+
+
+class RedisRateLimiter:
+    """Shared fixed-window limiter backed by Redis, so limits hold across app
+    instances (horizontal scaling, CLAUDE.md A04). Same interface as
+    RateLimiter. Fails OPEN on a Redis outage — availability over a hard cap —
+    which is the right tradeoff for a login limiter (the in-memory node-local
+    limiter still applies if you keep one, and a full outage is rare)."""
+
+    def __init__(self, client, max_attempts: int, window_seconds: int) -> None:  # noqa: ANN001
+        self._r = client
+        self.max_attempts = max_attempts
+        self.window_seconds = window_seconds
+
+    def _k(self, key: str) -> str:
+        return f"rl:{key}"
+
+    def check(self, key: str, now: float | None = None) -> tuple[bool, int]:
+        try:
+            count = self._r.get(self._k(key))
+            if count is None:
+                return True, 0
+            if int(count) >= self.max_attempts:
+                ttl = self._r.ttl(self._k(key))
+                return False, (int(ttl) + 1 if ttl and ttl > 0 else self.window_seconds)
+            return True, 0
+        except Exception:  # noqa: BLE001 — fail open on Redis trouble
+            return True, 0
+
+    def record_failure(self, key: str, now: float | None = None) -> None:
+        try:
+            pipe = self._r.pipeline()
+            pipe.incr(self._k(key))
+            pipe.expire(self._k(key), self.window_seconds, nx=True)
+            pipe.execute()
+        except Exception:  # noqa: BLE001
+            pass
+
+    def reset(self, key: str) -> None:
+        try:
+            self._r.delete(self._k(key))
+        except Exception:  # noqa: BLE001
+            pass
+
+
+_redis_client = None
+
+
+def make_rate_limiter(max_attempts: int, window_seconds: int):
+    """Return a Redis-backed limiter if VOLTPHISH_REDIS_URL is set, else the
+    in-memory one. Lazily builds a single shared Redis client."""
+    global _redis_client
+    from ..config import get_settings
+
+    url = get_settings().redis_url
+    if not url:
+        return RateLimiter(max_attempts=max_attempts, window_seconds=window_seconds)
+    if _redis_client is None:
+        import redis  # lazy — only needed when configured
+
+        _redis_client = redis.Redis.from_url(url, decode_responses=True, socket_timeout=2)
+    return RedisRateLimiter(_redis_client, max_attempts, window_seconds)

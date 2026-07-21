@@ -161,6 +161,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
   const [recip, setRecip] = useState<{ count: number; unique: number; excluded: number; duplicates: number } | null>(null);
   const [step, setStep] = useState(0);
   const [compact, setCompact] = useState(false);
+  const [mode, setMode] = useState<"quick" | "advanced">("quick");
+  const [advOpen, setAdvOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; // NG-011
   const [busy, setBusy] = useState(false);
@@ -169,7 +171,10 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
   const [authRef, setAuthRef] = useState("");
 
   const [f, setF] = useState({
-    name: prefill ? `${prefill.name} (copy)` : "",
+    // Pre-fill a sensible name so a new user never faces an empty required field.
+    name: prefill
+      ? `${prefill.name} (copy)`
+      : `Simulation — ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
     template_id: prefill?.template_id ?? 0,
     profile_id: prefill?.profile_id ?? 0,
     group_id: prefill?.group_id ?? 0,
@@ -284,8 +289,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In the guided flow, the primary/Enter advances to the next step until Review.
-    if (!compact && step < STEPS.length - 1) {
+    // In the full wizard, the primary/Enter advances to the next step until Review.
+    if (mode === "advanced" && !compact && step < STEPS.length - 1) {
       if (stepValid(step)) setStep(step + 1);
       return;
     }
@@ -346,9 +351,15 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
   const scheduleLabel = scheduled ? new Date(f.launch_at).toLocaleString() : launch ? "Launch now" : "Save as draft";
   const enrolLabel =
     f.auto_enroll_trigger === "off" ? "Off" : f.auto_enroll_trigger === "submitted" ? "On submit" : "On click";
+  // Plain-English one-liner of what's about to happen.
+  const peopleWord = recip && recip.count === 1 ? "person" : "people";
+  const quickSummary =
+    `Send “${templateName}” to ${recip ? recip.count : "…"} ${peopleWord} ` +
+    `${scheduled ? `on ${new Date(f.launch_at).toLocaleString()}` : "now"}, from ${urlLabel.toLowerCase()}.` +
+    (f.auto_enroll_trigger !== "off" ? " Failers get auto-enrolled in training." : "");
 
   return (
-    <Modal title={prefill ? "Clone campaign — review & create" : "New campaign"} onClose={onClose} wide>
+    <Modal title={prefill ? "Clone campaign" : "New campaign"} onClose={onClose} wide={mode === "advanced"}>
       {!ready ? (
         <FormSkeleton fields={6} />
       ) : missing ? (
@@ -368,6 +379,133 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
         </Empty>
       ) : (
         <form onSubmit={submit}>
+          <div className="mode-switch" role="tablist" aria-label="Campaign builder mode">
+            <button type="button" role="tab" aria-selected={mode === "quick"} className={mode === "quick" ? "on" : ""} onClick={() => setMode("quick")}>
+              ⚡ Quick launch
+            </button>
+            <button type="button" role="tab" aria-selected={mode === "advanced"} className={mode === "advanced" ? "on" : ""} onClick={() => setMode("advanced")}>
+              ⚙ Full control
+            </button>
+          </div>
+
+          {mode === "quick" && (
+            <div className="quick">
+              <div className="field">
+                <label>Name your test <span className="hint">just for you — recipients never see it</span></label>
+                <input value={f.name} onChange={(e) => set("name", e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>Who should get it? <span className="hint">pick one or more groups</span></label>
+                <div className="btn-row" style={{ flexWrap: "wrap" }} role="group" aria-label="Target groups" onKeyDown={onChipKey}>
+                  {groups.map((g) => (
+                    <button type="button" key={g.id} className={`chip ${groupIds.includes(g.id) ? "on" : ""}`} aria-pressed={groupIds.includes(g.id)} onClick={() => toggleGroup("inc", g.id)}>
+                      {groupIds.includes(g.id) ? "✓ " : ""}{g.name} ({g.target_count})
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="field">
+                <label>Which email lure? <span className="hint">the message they receive</span></label>
+                <select value={f.template_id} onChange={(e) => set("template_id", Number(e.target.value))}>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+
+              <button type="button" className="adv-toggle" aria-expanded={advOpen} onClick={() => setAdvOpen((o) => !o)}>
+                <span className="adv-caret">{advOpen ? "▾" : "▸"}</span> Advanced options
+                <span className="hint"> — exclude people, landing page, link, schedule, auto-training</span>
+              </button>
+              {advOpen && (
+                <div className="adv-body">
+                  {groups.length > 1 && (
+                    <div className="field">
+                      <label>Never-phish <span className="hint">removed from the send (execs, leavers, opt-outs)</span></label>
+                      <div className="btn-row" style={{ flexWrap: "wrap" }} role="group" aria-label="Exclude groups" onKeyDown={onChipKey}>
+                        {groups.map((g) => (
+                          <button
+                            type="button"
+                            key={g.id}
+                            className={`chip ${excludeIds.includes(g.id) ? "on exclude" : ""}`}
+                            aria-pressed={excludeIds.includes(g.id)}
+                            onClick={() => toggleGroup("exc", g.id)}
+                            disabled={groupIds.includes(g.id) && groupIds.length === 1}
+                          >
+                            {excludeIds.includes(g.id) ? "✕ " : ""}{g.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="row2">
+                    <div className="field">
+                      <label>Landing page</label>
+                      <select value={f.page_id} onChange={(e) => set("page_id", Number(e.target.value))}>
+                        <option value={0}>Built-in awareness page</option>
+                        {pages.map((pg) => <option key={pg.id} value={pg.id}>{pg.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Sending profile</label>
+                      <select value={f.profile_id} onChange={(e) => set("profile_id", Number(e.target.value))}>
+                        {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Link recipients open <span className="hint">where the phishing link points</span></label>
+                    <select value={urlMode} onChange={(e) => pickUrlMode(e.target.value as "tunnel" | "server" | "custom")}>
+                      {tunnel?.managed
+                        ? <option value="tunnel">🌐 New public link — recommended</option>
+                        : tunnel?.url && <option value="tunnel">🌐 Public link — {tunnel.url}</option>}
+                      <option value="server">🖥 This server — {window.location.origin}</option>
+                      <option value="custom">✏️ Custom URL…</option>
+                    </select>
+                    {urlMode === "custom" && (
+                      <input style={{ marginTop: 8 }} value={f.phish_url} onChange={(e) => set("phish_url", e.target.value)} placeholder="https://your-public-host.example.com" required />
+                    )}
+                  </div>
+                  <div className="row2">
+                    <div className="field">
+                      <label>Schedule for later <span className="hint">(leave empty = now)</span></label>
+                      <input type="datetime-local" value={f.launch_at} onChange={(e) => set("launch_at", e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Send by <span className="hint">(drip until then)</span></label>
+                      <input type="datetime-local" value={f.send_by_at} onChange={(e) => set("send_by_at", e.target.value)} disabled={!scheduled} />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>🎓 Auto-enrol failers in training</label>
+                    <select value={f.auto_enroll_trigger} onChange={(e) => set("auto_enroll_trigger", e.target.value)}>
+                      <option value="off">Off</option>
+                      <option value="clicked">When someone clicks (or submits)</option>
+                      <option value="submitted">Only when someone submits data</option>
+                    </select>
+                  </div>
+                  <div className="hint">Need more (redirect, jitter, business-hours)? Switch to <button type="button" className="linklike" onClick={() => setMode("advanced")}>Full control</button>.</div>
+                </div>
+              )}
+
+              <div className="banner" style={{ margin: "16px 0 0" }}>📋 {quickSummary}</div>
+
+              {!scheduled && (
+                <label className="field check" style={{ cursor: "pointer", marginTop: 12 }}>
+                  <input type="checkbox" checked={authorized} onChange={(e) => setAuthorized(e.target.checked)} />
+                  <span>I'm authorized to run this simulation against these recipients.</span>
+                </label>
+              )}
+
+              <div className="wiz-nav">
+                <button type="button" className="btn" onClick={onClose}>Cancel</button>
+                <button className="btn primary" disabled={busy || !allValid}>
+                  {busy ? "Working…" : scheduled ? "🕑 Schedule" : `⚡ Launch to ${recip ? recip.count : "…"} ${peopleWord}`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {mode === "advanced" && (
+          <>
           <div className="wiz-head">
             <div className="wiz-steps" role="tablist" aria-label="Campaign steps">
               {STEPS.map((s, i) => (
@@ -674,6 +812,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
               )}
             </div>
           </div>
+          </>
+          )}
         </form>
       )}
     </Modal>

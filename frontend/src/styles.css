@@ -386,6 +386,20 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
 }
 .chip:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
+/* ── Quick launch vs Full control mode switch ───────── */
+.mode-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--bg-input); border: 1px solid var(--border); margin-bottom: 18px; }
+.mode-switch button { background: none; border: none; cursor: pointer; font: inherit; font-size: var(--fs-sm); font-weight: 650; color: var(--text-dim); padding: 6px 15px; border-radius: 999px; transition: background 0.15s ease, color 0.15s ease; }
+.mode-switch button:hover { color: var(--text); }
+.mode-switch button:focus-visible { outline: none; box-shadow: var(--ring); }
+.mode-switch button.on { background: var(--accent-grad); color: #fff; }
+
+/* ── Quick launch body + advanced expander ──────────── */
+.adv-toggle { display: block; width: 100%; text-align: left; background: none; border: none; border-top: 1px dashed var(--border); margin-top: 4px; padding: 12px 2px 6px; cursor: pointer; font: inherit; font-size: var(--fs-base); font-weight: 620; color: var(--text); }
+.adv-toggle:hover { color: var(--accent); }
+.adv-toggle:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 6px; }
+.adv-caret { display: inline-block; width: 14px; color: var(--accent); }
+.adv-body { padding: 6px 0 2px; animation: fadeUp 0.2s ease; }
+
 /* ── Campaign wizard (guided multi-step form) ───────── */
 .wiz-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .wiz-steps { display: flex; gap: 2px; flex-wrap: wrap; }

@@ -62,5 +62,24 @@ services:
     profiles:
       - tunnel
 
+  # Stable public URL on YOUR OWN domain (survives restarts). One-time setup:
+  #   1. Cloudflare dashboard → Zero Trust → Networks → Tunnels → Create a tunnel
+  #      → pick "Cloudflared" → copy the token.
+  #   2. Add a Public Hostname routing your domain → http://voltphish:8080
+  #   3. Put the token in a .env file next to this compose:
+  #        CLOUDFLARE_TUNNEL_TOKEN=eyJ...   VOLTPHISH_PUBLIC_URL=https://phish.yourdomain.com
+  #   4. Set the campaign's Phishing URL to that domain via the "Custom URL…"
+  #      option (and, if you use auto-enroll emails, set the app's
+  #      VOLTPHISH_PHISH_BASE_URL above to the same domain).
+  #   5. docker compose --profile tunnel-named up -d
+  cloudflared-named:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - voltphish
+    restart: unless-stopped
+    profiles:
+      - tunnel-named
+
 volumes:
   voltphish-data:

@@ -310,7 +310,11 @@ def send_invites(
     if not enrollments:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No one to email — assign the module first.")
 
-    base = str(request.base_url).rstrip("/")
+    # Prefer the live public tunnel URL so links open for recipients; otherwise
+    # fall back to the admin's current URL.
+    from ..services.tunnel import detect_public_url
+
+    base = (detect_public_url() or str(request.base_url)).rstrip("/")
     for e in enrollments:
         enqueue(db, "send_training_invite", {"enrollment_id": e.id, "profile_id": payload.profile_id, "base": base})
     db.commit()

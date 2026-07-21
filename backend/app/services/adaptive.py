@@ -94,7 +94,6 @@ def auto_enroll_on_fail(db: DbSession, *, result: Result, campaign_id: int, trig
     Idempotent per (recipient, campaign): the first failure event wins, so a
     click-then-submit doesn't stack two modules on one person. Never raises — a
     training hiccup must not break tracking."""
-    from ..config import get_settings
     from ..models import Campaign
 
     try:
@@ -149,9 +148,13 @@ def auto_enroll_on_fail(db: DbSession, *, result: Result, campaign_id: int, trig
         )
 
         # Optionally deliver the training link straight away, via the campaign's
-        # sending profile, through the durable job queue (restart-safe).
+        # sending profile, through the durable job queue (restart-safe). Use the
+        # live public URL (tunnel) so the link opens for the recipient, not a
+        # localhost address only the server can reach.
         if want_email and campaign and campaign.profile_id:
-            base = get_settings().phish_base_url.rstrip("/")
+            from .tunnel import resolve_public_base_url
+
+            base = resolve_public_base_url().rstrip("/")
             enqueue(
                 db, "send_training_invite",
                 {"enrollment_id": enrollment.id, "profile_id": campaign.profile_id, "base": base},

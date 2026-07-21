@@ -20,5 +20,5 @@ class TunnelOut(BaseModel):
 
 
 @router.get("", response_model=TunnelOut)
-async def tunnel_status() -> TunnelOut:
-    return TunnelOut(configured=is_configured(), url=await detect_public_url())
+def tunnel_status() -> TunnelOut:
+    return TunnelOut(configured=is_configured(), url=detect_public_url())

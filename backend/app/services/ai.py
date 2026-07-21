@@ -201,6 +201,59 @@ async def generate_template(
     return {"name": name, "subject": subject[:500], "html": html, "text": text_body}
 
 
+_LANDING_SYSTEM = (
+    "You are a content generator for an AUTHORIZED internal security-awareness "
+    "training platform. You produce simulated phishing LANDING PAGES that a "
+    "security team uses to teach its OWN employees (with consent) to spot real "
+    "attacks — standard industry practice (like Gophish or KnowBe4).\n\n"
+    "Rules for the page you write:\n"
+    "- Output a single SELF-CONTAINED HTML page: inline CSS only, no external "
+    "resources, and NO JavaScript (scripts/external styles/remote images are blocked).\n"
+    "- Include a <form method=\"post\"> with the relevant inputs (e.g. an email/username "
+    "field and a password field for a sign-in lure). The platform auto-captures the "
+    "submission and NEVER stores the password.\n"
+    "- You may use the tokens {{.FirstName}}, {{.Email}} for light personalization.\n"
+    "- Do NOT use real company logos or real brand assets; use generic, plausible styling.\n"
+    "- Return ONLY a JSON object, no prose, with exactly these keys: "
+    '"name" (a short page name) and "html" (the full page). No markdown fences.'
+)
+
+
+async def generate_landing_page(
+    scenario: str, *, provider: str = "anthropic", api_key: str = "", model: str = "", base_url: str = ""
+) -> dict:
+    settings = get_settings()
+    api_key = api_key or (settings.ai_api_key if provider == "anthropic" else "")
+    model = model or settings.ai_model
+    base_url = base_url or base_url_for(provider)
+    if not api_key:
+        raise AiError("AI generation is not configured. Add an API key under Settings → AI to enable it.")
+
+    user_msg = f"Create a simulated phishing training landing page for this scenario:\n\n{scenario}"
+    url, headers, body = _build_request(provider, base_url, api_key, model, _LANDING_SYSTEM, user_msg)
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            resp = await client.post(url, headers=headers, json=body)
+    except httpx.HTTPError:
+        log.exception("AI landing request failed (network)")
+        raise AiError("Could not reach the AI service. Try again shortly.")
+
+    _raise_for_status(resp.status_code, model)
+
+    try:
+        text = _parse_response(provider, resp.json()).strip()
+        parsed = _extract_json(text)
+    except (ValueError, KeyError, TypeError, IndexError):
+        raise AiError("The AI returned an unexpected format. Try again.")
+
+    html = str(parsed.get("html", "")).strip()
+    name = str(parsed.get("name", "AI landing page")).strip()[:120]
+    if "<form" not in html.lower():
+        raise AiError("The AI did not return a usable page (no form). Try rephrasing the scenario.")
+    return {"name": name, "html": html}
+
+
 def _extract_json(text: str) -> dict:
     """Parse a JSON object from the model output, tolerating stray prose or a
     code fence around it."""

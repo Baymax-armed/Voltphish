@@ -20,18 +20,23 @@ from .database import init_db
 from .middleware import SecurityHeadersMiddleware
 from .phish import server as phish_server
 from .routers import (
+    addins,
     apikeys,
     auth,
     campaigns,
     dashboard,
     deliverability,
     groups,
+    inbound,
     pages,
     profiles,
+    reported,
     settings as settings_router,
     sms_profiles,
     templates,
     testmail,
+    train,
+    training,
     users,
     webhooks,
 )
@@ -51,6 +56,8 @@ async def lifespan(_app: FastAPI):
     init_db()
     ensure_admin()
     ensure_dev_smtp_profile()
+    from .services.training_seed import seed_training
+    seed_training()
     start_workers()
     start_scheduler()
     log.info("VoltPhish started (env=%s, mail_backend=%s)", settings.env.value, settings.mail_backend.value)
@@ -99,6 +106,15 @@ app.include_router(apikeys.router)
 app.include_router(settings_router.router)
 app.include_router(dashboard.router)
 app.include_router(deliverability.router)
+app.include_router(reported.router)
+app.include_router(training.router)
+
+# Public, token-gated report-phish ingest + add-in asset server
+app.include_router(inbound.router)
+app.include_router(addins.router)
+
+# Public trainee-facing training delivery (token-gated)
+app.include_router(train.router)
 
 # Public phishing/tracking server (unauthenticated by design)
 app.include_router(phish_server.router)

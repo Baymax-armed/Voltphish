@@ -41,6 +41,7 @@ def create_group(payload: GroupCreate, db: DbSession = Depends(get_db)) -> Group
             first_name=t.first_name,
             last_name=t.last_name,
             position=t.position,
+            is_vip=t.is_vip,
         )
         for t in payload.targets
     ]
@@ -76,6 +77,7 @@ def update_group(group_id: int, payload: GroupUpdate, db: DbSession = Depends(ge
             first_name=t.first_name,
             last_name=t.last_name,
             position=t.position,
+            is_vip=t.is_vip,
         )
         for t in payload.targets
     ]

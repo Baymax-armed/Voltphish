@@ -47,6 +47,7 @@ class ResultOut(BaseModel):
     send_error: str | None
     sent_at: datetime | None
     last_event_at: datetime | None
+    attachment_opened_at: datetime | None = None
     model_config = {"from_attributes": True}
 
 
@@ -77,6 +78,7 @@ class CampaignStats(BaseModel):
     submitted: int
     reported: int
     error: int
+    attachments_opened: int = 0
 
 
 class CampaignDetail(CampaignOut):

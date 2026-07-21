@@ -11,6 +11,7 @@ import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
@@ -18,12 +19,15 @@ from ..config import get_settings
 from ..database import get_db
 from ..dependencies import SESSION_COOKIE, client_ip, get_current_user
 from ..models import Session as SessionModel
-from ..models import User, utcnow
+from ..models import User, UserRole, utcnow
 from ..csrf import csrf_protect
+from ..permissions import permissions_for
 from ..schemas.auth import AuthOut, LoginRequest, UserOut
 from ..schemas.common import Message
 from ..schemas.user import ChangePassword
 from ..security import (
+    decrypt_secret,
+    encrypt_secret,
     hash_password,
     hash_token,
     needs_rehash,
@@ -31,6 +35,9 @@ from ..security import (
     verify_password,
 )
 from ..services.ratelimit import RateLimiter
+from ..services import totp as totp_svc
+from ..services.totp import verify as totp_verify
+from pydantic import BaseModel, Field as PField
 
 log = logging.getLogger("phishsim.auth")
 settings = get_settings()
@@ -42,6 +49,27 @@ _login_limiter = RateLimiter(
 )
 
 _GENERIC_LOGIN_ERROR = "Invalid email or password"
+
+
+def _mint_session(db: DbSession, user: User, request: Request, response: Response) -> str:
+    """Rotate sessions and mint a fresh one + cookie. Returns the CSRF token.
+    Shared by password login and SSO callback."""
+    db.query(SessionModel).filter(SessionModel.user_id == user.id).delete()
+    token = new_session_token()
+    csrf = new_session_token()
+    db.add(
+        SessionModel(
+            user_id=user.id,
+            token_hash=hash_token(token),
+            csrf_token=csrf,
+            expires_at=utcnow() + timedelta(seconds=settings.session_ttl_seconds),
+            user_agent=(request.headers.get("user-agent") or "")[:255] or None,
+            ip=(client_ip(request) or "unknown")[:45],
+        )
+    )
+    db.commit()
+    _set_session_cookie(response, token)
+    return csrf
 
 
 def _set_session_cookie(response: Response, token: str) -> None:
@@ -88,6 +116,22 @@ def login(
         log.info("login failed email=%s ip=%s", payload.email, ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_GENERIC_LOGIN_ERROR)
 
+    # Second factor (TOTP), if the account has 2FA enabled. The password was
+    # correct at this point; require a valid code before minting a session.
+    if user.totp_enabled:
+        if not payload.code:
+            # First step succeeded — ask the SPA for the code. No session, no
+            # cookie, and we don't clear the rate-limit counter yet.
+            return AuthOut(
+                id=0, email=payload.email, role=UserRole.operator, csrf_token="",
+                two_factor_required=True,
+            )
+        secret = decrypt_secret(user.totp_secret_enc)
+        if not secret or not totp_verify(secret, payload.code):
+            _login_limiter.record_failure(rl_key)
+            log.info("login 2fa failed email=%s ip=%s", payload.email, ip)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication code")
+
     # Opportunistic rehash if parameters changed.
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(payload.password)
@@ -115,6 +159,8 @@ def login(
     return AuthOut(
         id=user.id, email=user.email, role=user.role, csrf_token=csrf,
         must_change_password=user.must_change_password,
+        two_factor_enabled=user.totp_enabled,
+        permissions=permissions_for(user),
     )
 
 
@@ -172,4 +218,164 @@ def me(
         role=user.role,
         csrf_token=(session.csrf_token if session and session.csrf_token else ""),
         must_change_password=user.must_change_password,
+        two_factor_enabled=user.totp_enabled,
+        permissions=permissions_for(user),
     )
+
+
+# ---- Two-factor auth (TOTP) enrollment ---------------------------------------
+
+
+class TotpStatus(BaseModel):
+    enabled: bool
+
+
+class TotpSetupOut(BaseModel):
+    secret: str          # base32, shown for manual entry
+    otpauth_uri: str
+    qr_data_uri: str     # inline PNG for the authenticator to scan
+
+
+class TotpCode(BaseModel):
+    code: str = PField(min_length=6, max_length=12)
+
+
+@router.get("/2fa/status", response_model=TotpStatus)
+def totp_status(user: User = Depends(get_current_user)) -> TotpStatus:
+    return TotpStatus(enabled=user.totp_enabled)
+
+
+@router.post("/2fa/setup", response_model=TotpSetupOut, dependencies=[Depends(csrf_protect)])
+def totp_setup(
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TotpSetupOut:
+    """Generate (or regenerate) a pending TOTP secret. Enrollment isn't active
+    until /2fa/enable confirms a code. Refused while 2FA is already enabled —
+    the user must disable first (avoids silently rotating a working secret)."""
+    if user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Two-factor is already enabled")
+    secret = totp_svc.new_secret()
+    user.totp_secret_enc = encrypt_secret(secret)
+    db.commit()
+    uri = totp_svc.provisioning_uri(secret, user.email)
+    log.info("2fa setup started user=%s", user.email)
+    return TotpSetupOut(secret=secret, otpauth_uri=uri, qr_data_uri=totp_svc.qr_data_uri(uri))
+
+
+@router.post("/2fa/enable", response_model=TotpStatus, dependencies=[Depends(csrf_protect)])
+def totp_enable(
+    payload: TotpCode,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TotpStatus:
+    if user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Two-factor is already enabled")
+    secret = decrypt_secret(user.totp_secret_enc) if user.totp_secret_enc else None
+    if not secret:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Start setup first")
+    if not totp_verify(secret, payload.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid authentication code")
+    user.totp_enabled = True
+    db.commit()
+    log.info("2fa enabled user=%s", user.email)
+    return TotpStatus(enabled=True)
+
+
+# ---- SSO (OpenID Connect) ----------------------------------------------------
+
+
+class SsoInfo(BaseModel):
+    enabled: bool
+    button_label: str
+
+
+@router.get("/sso/info", response_model=SsoInfo)
+def sso_info(db: DbSession = Depends(get_db)) -> SsoInfo:
+    """Public: lets the login page decide whether to show the SSO button."""
+    from ..services.oidc import get_oidc_config
+
+    cfg = get_oidc_config(db)
+    return SsoInfo(enabled=bool(cfg["enabled"] and cfg["issuer"] and cfg["client_id"]),
+                   button_label=cfg["button_label"])
+
+
+def _oidc_redirect_uri(request: Request) -> str:
+    return str(request.base_url).rstrip("/") + "/api/v1/auth/oidc/callback"
+
+
+@router.get("/oidc/login")
+def oidc_login(request: Request, db: DbSession = Depends(get_db)) -> Response:
+    from ..services.oidc import OidcError, begin_login
+
+    try:
+        url = begin_login(db, _oidc_redirect_uri(request))
+    except OidcError as exc:
+        log.warning("oidc login start failed: %s", exc)
+        return RedirectResponse(url="/login?sso_error=config", status_code=302)
+    return RedirectResponse(url=url, status_code=302)
+
+
+@router.get("/oidc/callback")
+def oidc_callback(
+    request: Request,
+    code: str = "",
+    state: str = "",
+    error: str = "",
+    db: DbSession = Depends(get_db),
+) -> Response:
+    from ..services.oidc import OidcError, complete_login
+
+    if error or not code or not state:
+        return RedirectResponse(url="/login?sso_error=denied", status_code=302)
+    try:
+        info = complete_login(db, code=code, state=state, redirect_uri=_oidc_redirect_uri(request))
+    except OidcError as exc:
+        log.info("oidc callback failed: %s", exc)
+        return RedirectResponse(url="/login?sso_error=verify", status_code=302)
+
+    email = info["email"]
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    if user is None:
+        if not info["auto_provision"]:
+            log.info("oidc: no account for %s and auto-provision off", email)
+            return RedirectResponse(url="/login?sso_error=noaccount", status_code=302)
+        user = User(
+            email=email,
+            # Unusable random password — SSO users authenticate via the IdP only.
+            password_hash=hash_password(new_session_token()),
+            role=UserRole.operator,
+            is_active=True,
+            must_change_password=False,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        log.info("oidc: provisioned new user %s", email)
+    if not user.is_active:
+        return RedirectResponse(url="/login?sso_error=disabled", status_code=302)
+
+    resp = RedirectResponse(url="/", status_code=302)
+    _mint_session(db, user, request, resp)
+    log.info("oidc login ok user_id=%s", user.id)
+    return resp
+
+
+@router.post("/2fa/disable", response_model=TotpStatus, dependencies=[Depends(csrf_protect)])
+def totp_disable(
+    payload: TotpCode,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TotpStatus:
+    """Disable 2FA. Requires a current code so a hijacked live session can't
+    silently strip the second factor off the account."""
+    if not user.totp_enabled:
+        return TotpStatus(enabled=False)
+    secret = decrypt_secret(user.totp_secret_enc) if user.totp_secret_enc else None
+    if not secret or not totp_verify(secret, payload.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid authentication code")
+    user.totp_enabled = False
+    user.totp_secret_enc = None
+    db.commit()
+    log.info("2fa disabled user=%s", user.email)
+    return TotpStatus(enabled=False)

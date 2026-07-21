@@ -205,6 +205,7 @@ function PageForm({
   const [loaded, setLoaded] = useState(pageId === null);
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const doImportSite = async () => {
     if (!importUrl.trim()) return;
@@ -271,7 +272,7 @@ function PageForm({
           </div>
         </div>
         <div className="field">
-          <label>Import a real site <span className="hint">(SSRF-guarded — no internal addresses)</span></label>
+          <label>Start from <span className="hint">import a real site, or let AI draft one</span></label>
           <div style={{ display: "flex", gap: 8 }}>
             <input
               value={importUrl}
@@ -279,10 +280,24 @@ function PageForm({
               placeholder="https://login.example.com"
             />
             <button type="button" className="btn" onClick={doImportSite} disabled={importing || !importUrl.trim()}>
-              {importing ? "Importing…" : "Import Site"}
+              {importing ? "Importing…" : "⭱ Import Site"}
+            </button>
+            <button type="button" className="btn primary" onClick={() => setAiOpen(true)} style={{ whiteSpace: "nowrap" }}>
+              ✨ Generate with AI
             </button>
           </div>
         </div>
+        {aiOpen && (
+          <AiPageModal
+            onApply={(r) => {
+              setHtml(r.html);
+              if (!name.trim()) setName(r.name);
+              setAiOpen(false);
+              notify("AI draft applied — review and save");
+            }}
+            onClose={() => setAiOpen(false)}
+          />
+        )}
         <div className="field">
           <label>
             Page content <span className="hint">design visually or edit HTML — any form auto-posts to the tracker</span>
@@ -308,6 +323,74 @@ function PageForm({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function AiPageModal({
+  onApply,
+  onClose,
+}: {
+  onApply: (r: { name: string; html: string }) => void;
+  onClose: () => void;
+}) {
+  const { notify } = useToast();
+  const [scenario, setScenario] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const EXAMPLES = [
+    "Microsoft 365 sign-in page to verify your account",
+    "Company VPN portal login",
+    "HR payroll portal — confirm your bank details",
+    "Password reset form after a 'security alert'",
+  ];
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const r = await api.aiGeneratePage(scenario);
+      onApply(r);
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "AI generation failed", "error");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="✨ Generate landing page with AI" onClose={onClose}>
+      <div className="field">
+        <label>
+          Describe the page <span className="hint">the AI builds a self-contained HTML page with a capturing form</span>
+        </label>
+        <textarea
+          value={scenario}
+          onChange={(e) => setScenario(e.target.value)}
+          rows={3}
+          placeholder="e.g. Microsoft 365 sign-in page to re-verify your mailbox"
+          autoFocus
+        />
+      </div>
+      <div className="field">
+        <label>Try an example</label>
+        <div className="btn-row" style={{ flexWrap: "wrap", gap: 6 }}>
+          {EXAMPLES.map((ex) => (
+            <button key={ex} type="button" className="btn sm" onClick={() => setScenario(ex)} title={ex}>
+              {ex.length > 32 ? ex.slice(0, 32) + "…" : ex}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="hint" style={{ marginBottom: 14 }}>
+        Requires an AI key under <strong>Settings → AI</strong>. The draft replaces the current page content — edit before saving.
+      </div>
+      <div className="btn-row" style={{ justifyContent: "flex-end" }}>
+        <button type="button" className="btn" onClick={onClose} disabled={busy}>
+          Cancel
+        </button>
+        <button type="button" className="btn primary" onClick={generate} disabled={busy || scenario.trim().length < 4}>
+          {busy ? "Generating…" : "Generate draft"}
+        </button>
+      </div>
     </Modal>
   );
 }

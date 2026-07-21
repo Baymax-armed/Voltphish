@@ -4,9 +4,14 @@ import type {
   ApiKey,
   ApiKeyCreated,
   AiTemplate,
+  AllowlistResult,
   AtRiskUser,
+  AttackSurface,
+  Benchmark,
+  BenchmarkSettings,
   Champion,
   DeliverabilityResult,
+  GeoPoint,
   RiskOut,
   Attachment,
   Auth,
@@ -20,11 +25,25 @@ import type {
   PageSummary,
   Profile,
   AiSettings,
+  AddinConfig,
+  AutoEnrollConfig,
+  ImapSettings,
+  LeaderboardRow,
+  PermissionInfo,
+  RecommendationRow,
+  ReportedEmail,
+  ReportedSummary,
   RuntimeSettings,
+  SsoInfo,
+  SsoSettings,
+  TrainingEnrollment,
+  TrainingModule,
+  TrainingSummary,
   SmsProfile,
   Template,
   TemplateImportResult,
   TimelinePoint,
+  TotpSetup,
   Webhook,
 } from "./types";
 
@@ -75,15 +94,53 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   // auth
-  login: (email: string, password: string) =>
-    request<Auth>("POST", "/auth/login", { email, password }),
+  login: (email: string, password: string, code?: string) =>
+    request<Auth>("POST", "/auth/login", { email, password, code: code || null }),
   logout: () => request<{ detail: string }>("POST", "/auth/logout"),
   me: () => request<Auth>("GET", "/auth/me"),
   changePassword: (current_password: string, new_password: string) =>
     request<{ detail: string }>("POST", "/auth/change-password", { current_password, new_password }),
 
+  // reported emails (report-phish add-in triage)
+  listReported: (onlyReal = false) =>
+    request<ReportedEmail[]>("GET", `/reported${onlyReal ? "?only_real=true" : ""}`),
+  reportedSummary: () => request<ReportedSummary>("GET", "/reported/summary"),
+  updateReported: (id: number, p: { status?: string; notes?: string }) =>
+    request<ReportedEmail>("PATCH", `/reported/${id}`, p),
+  deleteReported: (id: number) => request<{ detail: string }>("DELETE", `/reported/${id}`),
+  addinConfig: () => request<AddinConfig>("GET", "/reported/addin/config"),
+  regenerateAddinToken: () => request<AddinConfig>("POST", "/reported/addin/regenerate"),
+
+  // training LMS
+  listModules: () => request<TrainingModule[]>("GET", "/training/modules"),
+  createModule: (m: Record<string, unknown>) => request<TrainingModule>("POST", "/training/modules", m),
+  updateModule: (id: number, m: Record<string, unknown>) =>
+    request<TrainingModule>("PUT", `/training/modules/${id}`, m),
+  deleteModule: (id: number) => request<{ detail: string }>("DELETE", `/training/modules/${id}`),
+  assignModule: (id: number, p: { emails?: string[]; group_id?: number | null }) =>
+    request<{ detail: string }>("POST", `/training/modules/${id}/assign`, p),
+  listEnrollments: (moduleId?: number) =>
+    request<TrainingEnrollment[]>("GET", `/training/enrollments${moduleId ? `?module_id=${moduleId}` : ""}`),
+  trainingLeaderboard: () => request<LeaderboardRow[]>("GET", "/training/leaderboard"),
+  trainingSummary: () => request<TrainingSummary>("GET", "/training/summary"),
+  trainingRecommendations: () => request<RecommendationRow[]>("GET", "/training/recommendations"),
+  getAutoEnroll: () => request<AutoEnrollConfig>("GET", "/training/auto-enroll"),
+  updateAutoEnroll: (p: AutoEnrollConfig) => request<AutoEnrollConfig>("PUT", "/training/auto-enroll", p),
+
+  // SSO (OIDC)
+  ssoInfo: () => request<SsoInfo>("GET", "/auth/sso/info"),
+  getSsoSettings: () => request<SsoSettings>("GET", "/settings/sso"),
+  updateSsoSettings: (p: Record<string, unknown>) => request<SsoSettings>("PUT", "/settings/sso", p),
+
+  // two-factor auth (TOTP)
+  totpStatus: () => request<{ enabled: boolean }>("GET", "/auth/2fa/status"),
+  totpSetup: () => request<TotpSetup>("POST", "/auth/2fa/setup"),
+  totpEnable: (code: string) => request<{ enabled: boolean }>("POST", "/auth/2fa/enable", { code }),
+  totpDisable: (code: string) => request<{ enabled: boolean }>("POST", "/auth/2fa/disable", { code }),
+
   // users (admin)
   listUsers: () => request<AdminUser[]>("GET", "/users"),
+  listPermissions: () => request<PermissionInfo[]>("GET", "/users/permissions"),
   createUser: (u: Record<string, unknown>) => request<AdminUser>("POST", "/users", u),
   updateUser: (id: number, u: Record<string, unknown>) => request<AdminUser>("PUT", `/users/${id}`, u),
   resetUserPassword: (id: number, password: string) =>
@@ -101,6 +158,7 @@ export const api = {
 
   // landing page import-from-URL
   importSite: (url: string) => request<{ url: string; html: string }>("POST", "/pages/import-site", { url }),
+  aiGeneratePage: (scenario: string) => request<{ name: string; html: string }>("POST", "/pages/ai-generate", { scenario }),
   updateTemplate: (id: number, t: Partial<Template>) =>
     request<Template>("PUT", `/templates/${id}`, t),
   deleteTemplate: (id: number) => request<{ detail: string }>("DELETE", `/templates/${id}`),
@@ -138,11 +196,20 @@ export const api = {
   updateAiSettings: (p: Record<string, unknown>) => request<AiSettings>("PUT", "/settings/ai", p),
   testAiSettings: () => request<{ detail: string }>("POST", "/settings/ai/test"),
 
+  getImapSettings: () => request<ImapSettings>("GET", "/settings/imap"),
+  updateImapSettings: (p: Record<string, unknown>) => request<ImapSettings>("PUT", "/settings/imap", p),
+  testImapSettings: () => request<{ detail: string }>("POST", "/settings/imap/test"),
+
   // dashboard aggregate
   getDashboard: () => request<DashboardData>("GET", "/dashboard"),
   getAtRisk: () => request<AtRiskUser[]>("GET", "/dashboard/at-risk"),
   getChampions: () => request<Champion[]>("GET", "/dashboard/champions"),
   getRisk: () => request<RiskOut>("GET", "/dashboard/risk"),
+  getGeo: () => request<GeoPoint[]>("GET", "/dashboard/geo"),
+  getAttackSurface: () => request<AttackSurface>("GET", "/dashboard/attack-surface"),
+  getBenchmark: () => request<Benchmark>("GET", "/dashboard/benchmark"),
+  getBenchmarkSettings: () => request<BenchmarkSettings>("GET", "/settings/benchmark"),
+  updateBenchmarkSettings: (p: Record<string, unknown>) => request<BenchmarkSettings>("PUT", "/settings/benchmark", p),
   getTimeline: () => request<TimelinePoint[]>("GET", "/dashboard/timeline"),
 
   // AI template generator (optional; requires PHISHSIM_AI_API_KEY on the server)
@@ -164,6 +231,8 @@ export const api = {
   // webhooks (admin)
   checkDeliverability: (domain: string, selector: string | null) =>
     request<DeliverabilityResult>("POST", "/deliverability/check", { domain, selector }),
+  generateAllowlist: (p: { domains: string[]; ips: string[]; urls: string[] }) =>
+    request<AllowlistResult>("POST", "/deliverability/allowlist", p),
 
   listWebhooks: () => request<Webhook[]>("GET", "/webhooks"),
   createWebhook: (w: Record<string, unknown>) => request<Webhook>("POST", "/webhooks", w),

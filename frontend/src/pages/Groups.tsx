@@ -168,7 +168,7 @@ function parseCsv(text: string): Target[] {
   const firstCols = splitCsvLine(lines[0]).map((c) => c.toLowerCase());
   const hasHeader = firstCols.some((c) => c.includes("email")) && !firstCols.some((c) => c.includes("@"));
 
-  const idx = { email: -1, first: -1, last: -1, position: -1, phone: -1 };
+  const idx = { email: -1, first: -1, last: -1, position: -1, phone: -1, vip: -1 };
   let dataLines = lines;
   if (hasHeader) {
     firstCols.forEach((c, i) => {
@@ -177,9 +177,11 @@ function parseCsv(text: string): Target[] {
       else if (c.includes("last")) idx.last = i;
       else if (c.includes("position") || c.includes("title") || c.includes("department") || c.includes("role")) idx.position = i;
       else if (c.includes("phone") || c.includes("mobile")) idx.phone = i;
+      else if (c.includes("vip")) idx.vip = i;
     });
     dataLines = lines.slice(1);
   }
+  const truthy = (v: string | undefined) => !!v && /^(1|y|yes|true|vip)$/i.test(v.trim());
 
   const out: Target[] = [];
   for (const line of dataLines) {
@@ -206,7 +208,8 @@ function parseCsv(text: string): Target[] {
       phone = rest.find((c) => /^[+\d][\d\s()-]{6,}$/.test(c)) || null;
     }
     if (!email || !email.includes("@")) continue;
-    out.push({ email, first_name: first, last_name: last, position, phone });
+    const is_vip = hasHeader && idx.vip >= 0 ? truthy(cols[idx.vip]) : false;
+    out.push({ email, first_name: first, last_name: last, position, phone, is_vip });
   }
   return out;
 }
@@ -352,6 +355,7 @@ function GroupForm({
                     <th>First</th>
                     <th>Last</th>
                     <th>Position</th>
+                    <th title="High-value target">VIP</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -363,6 +367,17 @@ function GroupForm({
                       <td>{t.first_name || "—"}</td>
                       <td>{t.last_name || "—"}</td>
                       <td>{t.position || "—"}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          type="button"
+                          className="linklike"
+                          title={t.is_vip ? "VIP — click to unset" : "Mark as high-value target"}
+                          style={{ fontSize: 16, color: t.is_vip ? "#f59e0b" : "var(--text-dim)" }}
+                          onClick={() => setTargets(targets.map((x, j) => (j === i ? { ...x, is_vip: !x.is_vip } : x)))}
+                        >
+                          {t.is_vip ? "★" : "☆"}
+                        </button>
+                      </td>
                       <td>
                         <button
                           type="button"

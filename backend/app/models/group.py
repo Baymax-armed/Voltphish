@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -36,5 +36,9 @@ class Target(Base):
     first_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     position: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # VAP: high-value target (exec/finance/IT). Their failures weigh more in the
+    # attack-surface view — the achievable, telemetry-free slice of "Very
+    # Attacked People" risk.
+    is_vip: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     group: Mapped["Group"] = relationship(back_populates="targets")

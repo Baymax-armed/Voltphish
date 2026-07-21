@@ -28,6 +28,7 @@ from ..database import get_db
 from ..dependencies import client_ip
 from ..models import Campaign, EventType, LandingPage, Result
 from ..models.base import utcnow
+from ..services.adaptive import auto_enroll_on_fail
 from ..services.events import record_event
 from ..services.qr import qr_png
 from ..services.renderer import RenderContext, render_landing
@@ -145,6 +146,25 @@ def track_open(rid: str, request: Request, db: DbSession = Depends(get_db)) -> R
     return _no_store(Response(content=_PIXEL, media_type="image/png"))
 
 
+@router.get("/a/{rid}.png")
+def track_attachment(rid: str, request: Request, db: DbSession = Depends(get_db)) -> Response:
+    """Pixel embedded in a lure attachment — records that the attachment was opened."""
+    result, campaign = _lookup(db, rid)
+    if result and campaign:
+        if result.attachment_opened_at is None:
+            result.attachment_opened_at = utcnow()
+        record_event(
+            db,
+            campaign_id=campaign.id,
+            rid=rid,
+            type=EventType.email_opened,  # counts as engagement; attachment flag on the result
+            ip=client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+        db.commit()
+    return _no_store(Response(content=_PIXEL, media_type="image/png"))
+
+
 @router.get("/q/{rid}.png")
 def track_qr(rid: str, db: DbSession = Depends(get_db)) -> Response:
     """Serve the per-recipient QR code (quishing). The QR encodes this
@@ -183,6 +203,7 @@ def track_click(rid: str, request: Request, db: DbSession = Depends(get_db)) -> 
         user_agent=request.headers.get("user-agent"),
     )
     db.commit()
+    auto_enroll_on_fail(db, result=result, campaign_id=campaign.id, trigger="clicked")
 
     # If the campaign has a custom landing page, show it (via /p/{rid}).
     # Otherwise honor an explicit redirect_url, else the built-in page.
@@ -241,6 +262,7 @@ async def landing_post(rid: str, request: Request, db: DbSession = Depends(get_d
             details=details,
         )
         db.commit()
+        auto_enroll_on_fail(db, result=result, campaign_id=campaign.id, trigger="submitted")
     # Redirect to the teaching page (awareness moment). Prefer the landing
     # page's own redirect, then the campaign's, then the built-in training page.
     base = (campaign.phish_url if campaign else None) or settings.phish_base_url

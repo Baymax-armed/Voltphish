@@ -141,6 +141,145 @@ def timeline(db: DbSession = Depends(get_db)) -> list[TimelinePoint]:
     ]
 
 
+class GeoPoint(BaseModel):
+    country: str
+    code: str
+    count: int
+
+
+@router.get("/geo", response_model=list[GeoPoint])
+async def geo(db: DbSession = Depends(get_db)) -> list[GeoPoint]:
+    """Country breakdown of where recipients clicked/submitted (geolocated IPs)."""
+    from collections import Counter
+
+    from ..services.geoip import geolocate
+
+    rows = db.execute(
+        select(Event.ip).where(
+            Event.type.in_([EventType.clicked_link, EventType.submitted_data]),
+            Event.ip.is_not(None),
+        )
+    ).all()
+    ips = [r[0] for r in rows if r[0]]
+    if not ips:
+        return []
+    located = await geolocate(ips)
+    counts: Counter = Counter()
+    codes: dict[str, str] = {}
+    for ip in ips:
+        g = located.get(ip, {"country": "Unknown", "code": ""})
+        counts[g["country"]] += 1
+        codes[g["country"]] = g["code"]
+    return [GeoPoint(country=name, code=codes.get(name, ""), count=n) for name, n in counts.most_common(12)]
+
+
+class AttackSurfacePerson(BaseModel):
+    email: str
+    targeted: int
+    failed: int
+    is_vip: bool
+    risk: str
+
+
+class AttackSurfaceOut(BaseModel):
+    people: list[AttackSurfacePerson]
+    vip_count: int
+    vip_failed: int
+
+
+@router.get("/attack-surface", response_model=AttackSurfaceOut)
+def attack_surface(db: DbSession = Depends(get_db)) -> AttackSurfaceOut:
+    """VAP-style view: who is targeted most, and how the high-value targets
+    (VIPs) are faring. VIP is admin-designated per recipient (telemetry-free
+    approximation of 'Very Attacked People')."""
+    from ..models import Target
+
+    vip_emails = {
+        r[0].lower()
+        for r in db.execute(select(Target.email).where(Target.is_vip.is_(True))).all()
+        if r[0]
+    }
+
+    agg: dict[str, dict] = {}
+    for email, status_ in db.execute(select(Result.email, Result.status)).all():
+        u = agg.setdefault(email, {"targeted": 0, "failed": 0})
+        u["targeted"] += 1
+        if status_ in (ResultStatus.clicked, ResultStatus.submitted):
+            u["failed"] += 1
+
+    def risk_of(u: dict) -> str:
+        rate = (u["failed"] / u["targeted"]) if u["targeted"] else 0.0
+        if rate >= 0.5:
+            return "high"
+        if rate > 0:
+            return "medium"
+        return "low"
+
+    people = [
+        AttackSurfacePerson(
+            email=email, targeted=u["targeted"], failed=u["failed"],
+            is_vip=email.lower() in vip_emails, risk=risk_of(u),
+        )
+        for email, u in agg.items()
+    ]
+    # VIPs first, then most-targeted, then most-failed.
+    people.sort(key=lambda p: (not p.is_vip, -p.targeted, -p.failed))
+    vip_failed = sum(1 for p in people if p.is_vip and p.failed > 0)
+    return AttackSurfaceOut(people=people[:20], vip_count=len(vip_emails), vip_failed=vip_failed)
+
+
+class BenchmarkOut(BaseModel):
+    enabled: bool
+    industry: str
+    baseline_click_rate: float
+    baseline_report_rate: float
+    your_click_rate: float
+    your_report_rate: float
+    sample: int  # number of results the org rates are based on
+
+
+@router.get("/benchmark", response_model=BenchmarkOut)
+def benchmark(db: DbSession = Depends(get_db)) -> BenchmarkOut:
+    """Compare this org's click/report rates against an admin-configured industry
+    baseline. Honest by design: a self-hosted tool has no cross-customer dataset,
+    so the baseline is a number the admin sets from public reports (DBIR, vendor
+    benchmarks) — not fabricated peer data."""
+    from ..models import Setting
+
+    def g(key: str, default: str = "") -> str:
+        row = db.get(Setting, key)
+        return row.value if row is not None and row.value not in (None, "") else default
+
+    def num(key: str) -> float:
+        try:
+            return float(g(key, "0") or 0)
+        except ValueError:
+            return 0.0
+
+    rows = dict(
+        db.execute(select(Result.status, func.count(Result.id)).group_by(Result.status)).all()
+    )
+    total = sum(rows.values())
+
+    def rc(s: ResultStatus) -> int:
+        return rows.get(s, 0)
+
+    failed = rc(ResultStatus.clicked) + rc(ResultStatus.submitted)
+    reported = rc(ResultStatus.reported)
+    click_rate = round(failed / total * 100, 1) if total else 0.0
+    report_rate = round(reported / total * 100, 1) if total else 0.0
+
+    return BenchmarkOut(
+        enabled=g("benchmark_enabled", "0") == "1",
+        industry=g("benchmark_industry", "Industry average"),
+        baseline_click_rate=num("benchmark_click_rate"),
+        baseline_report_rate=num("benchmark_report_rate"),
+        your_click_rate=click_rate,
+        your_report_rate=report_rate,
+        sample=total,
+    )
+
+
 class AtRiskUser(BaseModel):
     email: str
     clicked: int

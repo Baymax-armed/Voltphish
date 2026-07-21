@@ -11,6 +11,7 @@ class TargetIn(BaseModel):
     first_name: str | None = Field(default=None, max_length=120)
     last_name: str | None = Field(default=None, max_length=120)
     position: str | None = Field(default=None, max_length=120)
+    is_vip: bool = False
 
 
 class TargetOut(TargetIn):

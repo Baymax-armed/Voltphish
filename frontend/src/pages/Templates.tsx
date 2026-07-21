@@ -44,6 +44,62 @@ export default function Templates() {
     load();
   };
 
+  const exportAll = () => {
+    const data = (items ?? []).map((t) => ({
+      name: t.name, channel: t.channel, subject: t.subject,
+      envelope_sender: t.envelope_sender, html: t.html, text: t.text,
+    }));
+    const blob = new Blob([JSON.stringify({ voltphish_templates: data }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "voltphish-templates.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    let list: Record<string, unknown>[];
+    try {
+      const parsed = JSON.parse(await file.text());
+      list = Array.isArray(parsed) ? parsed : ((parsed.voltphish_templates ?? parsed.templates ?? [parsed]) as Record<string, unknown>[]);
+    } catch {
+      notify("That file isn't valid JSON.", "error");
+      return;
+    }
+    const existing = new Set((items ?? []).map((t) => t.name.toLowerCase()));
+    let ok = 0;
+    let fail = 0;
+    for (const t of list) {
+      if (!t || typeof t.name !== "string") {
+        fail++;
+        continue;
+      }
+      let name = t.name;
+      let n = 2;
+      while (existing.has(name.toLowerCase())) name = `${t.name} ${n++}`;
+      existing.add(name.toLowerCase());
+      try {
+        await api.createTemplate({
+          name,
+          channel: t.channel === "sms" ? "sms" : "email",
+          subject: (t.subject as string) || "",
+          envelope_sender: (t.envelope_sender as string) || null,
+          html: (t.html as string) || null,
+          text: (t.text as string) || null,
+        });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    notify(fail ? `Imported ${ok}; ${fail} skipped.` : `Imported ${ok} template${ok > 1 ? "s" : ""}.`, fail ? "error" : "ok");
+    load();
+  };
+
   const useFromGallery = async (g: GalleryTemplate) => {
     try {
       const existing = new Set((items ?? []).map((t) => t.name));
@@ -100,6 +156,13 @@ export default function Templates() {
           </div>
         </div>
         <div className="btn-row">
+          <label className="btn" style={{ cursor: "pointer" }} title="Import templates from a .json file">
+            ⭱ Import
+            <input type="file" accept=".json,application/json" onChange={importFile} style={{ display: "none" }} />
+          </label>
+          <button className="btn" onClick={exportAll} disabled={!items?.length} title="Export all templates to a shareable .json file">
+            ⭳ Export
+          </button>
           <button className="btn" onClick={() => setGallery(true)}>
             📚 Gallery
           </button>
@@ -320,6 +383,40 @@ function TemplateForm({
   const [raw, setRaw] = useState("");
   const [aiOpen, setAiOpen] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>(template?.attachments ?? []);
+  const [icsOpen, setIcsOpen] = useState(false);
+
+  const addIcs = async (ics: string, filename: string) => {
+    if (!template) return;
+    const b64 = btoa(unescape(encodeURIComponent(ics)));
+    try {
+      const att = await api.addAttachment(template.id, { filename, content_type: "text/calendar", content_b64: b64 });
+      setAttachments((a) => [...a, att]);
+      notify("Calendar invite attached — {{.URL}} becomes each recipient's link");
+      setIcsOpen(false);
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "Failed to attach", "error");
+    }
+  };
+
+  const addTrackedDoc = async () => {
+    if (!template) return;
+    const html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>Document</title></head>' +
+      '<body style="font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:40px auto;color:#222">' +
+      "<h2>Confidential document — {{.FirstName}}</h2>" +
+      "<p>For security, the full document opens in your verified browser session. Click below to view it:</p>" +
+      '<p><a href="{{.URL}}" style="display:inline-block;background:#0067b8;color:#fff;text-decoration:none;padding:10px 22px;border-radius:5px">View secure document</a></p>' +
+      '<p style="color:#888;font-size:12px">Document ref: {{.RId}}</p>' +
+      "{{.AttachTracker}}</body></html>";
+    const b64 = btoa(unescape(encodeURIComponent(html)));
+    try {
+      const att = await api.addAttachment(template.id, { filename: "document.html", content_type: "text/html", content_b64: b64 });
+      setAttachments((a) => [...a, att]);
+      notify("Tracked document attached — opening it records 'attachment opened'");
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "Failed to attach", "error");
+    }
+  };
 
   const applyAi = (t: { name: string; subject: string; html: string | null; text: string | null }) => {
     if (!name.trim()) setName(t.name);
@@ -514,11 +611,20 @@ function TemplateForm({
                   </table>
                 </div>
               )}
-              <input type="file" onChange={onPickFile} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <input type="file" onChange={onPickFile} />
+                <button type="button" className="btn sm" onClick={() => setIcsOpen(true)}>
+                  📅 Add calendar invite
+                </button>
+                <button type="button" className="btn sm" onClick={addTrackedDoc} title="An HTML document that records when it's opened">
+                  📎 Add tracked document
+                </button>
+              </div>
             </>
           )}
         </div>
         )}
+        {icsOpen && <IcsModal onAdd={addIcs} onClose={() => setIcsOpen(false)} />}
 
         <div className="btn-row" style={{ justifyContent: "flex-end" }}>
           <button type="button" className="btn" onClick={onClose}>
@@ -606,6 +712,89 @@ function AiGenerateModal({
         </button>
         <button type="button" className="btn primary" onClick={generate} disabled={busy || scenario.trim().length < 4}>
           {busy ? "Generating…" : "Generate draft"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function IcsModal({ onAdd, onClose }: { onAdd: (ics: string, filename: string) => Promise<void>; onClose: () => void }) {
+  const [title, setTitle] = useState("Mandatory security briefing — action required");
+  const [orgName, setOrgName] = useState("IT Service Desk");
+  const [orgEmail, setOrgEmail] = useState("it-support@example.com");
+  const [when, setWhen] = useState("");
+  const [duration, setDuration] = useState(30);
+  const [note, setNote] = useState("Please review your account settings before the meeting.");
+  const [busy, setBusy] = useState(false);
+
+  const esc = (s: string) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\r?\n/g, "\\n");
+  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  const build = () => {
+    const start = when ? new Date(when) : new Date(Date.now() + 24 * 3600 * 1000);
+    const end = new Date(start.getTime() + duration * 60000);
+    const uid = `${start.getTime()}-${Math.floor(Math.random() * 1e6)}@voltphish`;
+    return [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VoltPhish//Invite//EN", "METHOD:REQUEST",
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${fmt(new Date())}`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${esc(title)}`,
+      `ORGANIZER;CN=${esc(orgName)}:mailto:${orgEmail}`,
+      "LOCATION:{{.URL}}",
+      `DESCRIPTION:${esc(note)}\\n\\nJoin here: {{.URL}}`,
+      "STATUS:CONFIRMED", "SEQUENCE:0",
+      "BEGIN:VALARM", "TRIGGER:-PT10M", "ACTION:DISPLAY", "DESCRIPTION:Reminder", "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR",
+    ].join("\r\n");
+  };
+
+  const add = async () => {
+    setBusy(true);
+    await onAdd(build(), "invite.ics");
+    setBusy(false);
+  };
+
+  return (
+    <Modal title="📅 Add calendar invite (.ics)" onClose={onClose}>
+      <p className="hint" style={{ marginBottom: 14 }}>
+        Attaches a meeting invite whose link is <span className="mono">{"{{.URL}}"}</span> — rendered to each
+        recipient's tracking link. Opening/accepting the invite and clicking through is tracked as a click.
+      </p>
+      <div className="field">
+        <label>Event title</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="row2">
+        <div className="field">
+          <label>Organizer name</label>
+          <input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Organizer email</label>
+          <input type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} />
+        </div>
+      </div>
+      <div className="row2">
+        <div className="field">
+          <label>Start <span className="hint">(optional — default tomorrow)</span></label>
+          <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Duration (min)</label>
+          <input type="number" min={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+        </div>
+      </div>
+      <div className="field">
+        <label>Note</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+      <div className="btn-row" style={{ justifyContent: "flex-end" }}>
+        <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+        <button type="button" className="btn primary" onClick={add} disabled={busy}>
+          {busy ? "Attaching…" : "Attach invite"}
         </button>
       </div>
     </Modal>

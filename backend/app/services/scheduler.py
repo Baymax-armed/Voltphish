@@ -48,11 +48,23 @@ def _launch_due_campaigns() -> int:
 
 
 async def _run_loop() -> None:
+    tick = 0
     while True:
         try:
             await asyncio.to_thread(_launch_due_campaigns)
         except Exception:  # noqa: BLE001
             log.exception("scheduler tick failed")
+        # Poll the reported-phish mailbox roughly every 60s.
+        if tick % 4 == 0:
+            try:
+                from .imap_monitor import poll_reported
+
+                n = await asyncio.to_thread(poll_reported)
+                if n:
+                    log.info("IMAP: credited %s recipient(s) as reported", n)
+            except Exception:  # noqa: BLE001
+                log.exception("IMAP poll failed")
+        tick += 1
         await asyncio.sleep(_TICK_SECONDS)
 
 

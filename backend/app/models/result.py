@@ -69,6 +69,8 @@ class Result(Base):
     last_event_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     # Set when the recipient acknowledges the just-in-time training page.
     trained_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # Set when the recipient opens a tracked attachment (e.g. a lure document).
+    attachment_opened_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
 
     campaign: Mapped["object"] = relationship("Campaign", back_populates="results")

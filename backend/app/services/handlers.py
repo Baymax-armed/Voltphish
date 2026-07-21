@@ -38,14 +38,25 @@ _TERMINAL_DELIVERED = {
 }
 
 
-def build_attachments(template) -> list[tuple[str, str, bytes]]:  # noqa: ANN001
-    """Decode a template's stored attachments into (name, content_type, bytes)."""
+_TEXT_ATTACH_EXT = (".ics", ".html", ".htm", ".txt", ".csv", ".vcf", ".eml")
+
+
+def build_attachments(template, ctx=None) -> list[tuple[str, str, bytes]]:  # noqa: ANN001
+    """Decode a template's stored attachments into (name, content_type, bytes).
+    Text-based attachments (e.g. a calendar .ics lure) get their personalization
+    tokens rendered per recipient, so {{.URL}} becomes that recipient's link."""
     out: list[tuple[str, str, bytes]] = []
     for att in getattr(template, "attachments", []) or []:
         try:
             raw = base64.b64decode(att.content_b64)
         except (binascii.Error, ValueError):
             continue
+        is_text = (att.content_type or "").startswith("text/") or att.filename.lower().endswith(_TEXT_ATTACH_EXT)
+        if ctx is not None and is_text:
+            try:
+                raw = render_text(raw.decode("utf-8"), ctx).encode("utf-8")
+            except UnicodeDecodeError:
+                pass
         out.append((att.filename, att.content_type, raw))
     return out
 
@@ -89,7 +100,7 @@ async def handle_send_email(payload: dict) -> None:
                     to_address=result.email, from_address=from_addr, subject=subject,
                     html=html, text=text, envelope_from=profile.envelope_sender,
                     extra_headers=profile_headers(profile),
-                    attachments=build_attachments(template),
+                    attachments=build_attachments(template, ctx),
                 ),
                 profile,
             )

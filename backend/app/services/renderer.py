@@ -72,6 +72,9 @@ def _substitute(body: str, ctx: RenderContext, *, is_html: bool) -> str:
         "{{.Tracker}}": _pixel_tag(pixel) if is_html else "",
         "{{.QRURL}}": qr,            # our own URL; safe to inline
         "{{.QR}}": _qr_tag(qr) if is_html else qr,
+        "{{.AttachURL}}": tracker.attach_pixel_url(ctx.phish_url, ctx.rid),
+        # Always a real <img> pixel so it fires from inside an HTML attachment.
+        "{{.AttachTracker}}": _pixel_tag(tracker.attach_pixel_url(ctx.phish_url, ctx.rid)),
     }
     for token, value in replacements.items():
         body = body.replace(token, value)

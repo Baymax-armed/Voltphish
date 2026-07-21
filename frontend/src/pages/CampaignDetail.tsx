@@ -161,6 +161,11 @@ export default function CampaignDetail() {
                   <td>{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</td>
                   <td>
                     <Badge status={r.status} />
+                    {r.attachment_opened_at && (
+                      <span className="badge opened" style={{ marginLeft: 6 }} title="Opened a tracked attachment">
+                        📎 attachment
+                      </span>
+                    )}
                     {r.send_error && (
                       <span className="hint" style={{ marginLeft: 6 }}>
                         {r.send_error}

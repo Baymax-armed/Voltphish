@@ -7,15 +7,20 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from ..csrf import csrf_protect
 from ..database import get_db
-from ..dependencies import get_current_user, require_admin
+from ..dependencies import get_current_user
+from ..permissions import require_permission
+
+require_admin = require_permission("users:manage")
 from ..models import Session as SessionModel
 from ..models import User, UserRole
+from ..permissions import PERMISSIONS, sanitize_permissions
 from ..schemas.common import Message
 from ..schemas.user import PasswordReset, UserAdminOut, UserCreate, UserUpdate
 from ..security import hash_password
@@ -35,17 +40,30 @@ def _active_admin_count(db: DbSession) -> int:
     ).scalar_one()
 
 
+class PermissionInfo(BaseModel):
+    key: str
+    label: str
+
+
+@router.get("/permissions", response_model=list[PermissionInfo])
+def list_permissions() -> list[PermissionInfo]:
+    """Catalog of delegatable permissions for the role editor."""
+    return [PermissionInfo(key=k, label=v) for k, v in PERMISSIONS.items()]
+
+
 @router.get("", response_model=list[UserAdminOut])
-def list_users(db: DbSession = Depends(get_db)) -> list[User]:
-    return list(db.execute(select(User).order_by(User.email)).scalars())
+def list_users(db: DbSession = Depends(get_db)) -> list[UserAdminOut]:
+    users = db.execute(select(User).order_by(User.email)).scalars()
+    return [UserAdminOut.from_user(u) for u in users]
 
 
 @router.post("", response_model=UserAdminOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: DbSession = Depends(get_db)) -> User:
+def create_user(payload: UserCreate, db: DbSession = Depends(get_db)) -> UserAdminOut:
     user = User(
         email=str(payload.email).lower(),
         password_hash=hash_password(payload.password),
         role=payload.role,
+        extra_permissions=sanitize_permissions(payload.permissions),
         # The admin sets an initial password; the user must change it on first login.
         must_change_password=True,
     )
@@ -57,7 +75,7 @@ def create_user(payload: UserCreate, db: DbSession = Depends(get_db)) -> User:
         raise HTTPException(status.HTTP_409_CONFLICT, "A user with that email already exists")
     db.refresh(user)
     log.info("admin created user %s (role=%s)", user.email, user.role.value)
-    return user
+    return UserAdminOut.from_user(user)
 
 
 @router.put("/{user_id}", response_model=UserAdminOut)
@@ -66,7 +84,7 @@ def update_user(
     payload: UserUpdate,
     db: DbSession = Depends(get_db),
     me: User = Depends(get_current_user),
-) -> User:
+) -> UserAdminOut:
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
@@ -82,6 +100,8 @@ def update_user(
 
     if payload.role is not None:
         user.role = payload.role
+    if payload.permissions is not None:
+        user.extra_permissions = sanitize_permissions(payload.permissions)
     if payload.is_active is not None:
         user.is_active = payload.is_active
         if not payload.is_active:
@@ -89,7 +109,7 @@ def update_user(
             db.query(SessionModel).filter(SessionModel.user_id == user.id).delete()
     db.commit()
     db.refresh(user)
-    return user
+    return UserAdminOut.from_user(user)
 
 
 @router.post("/{user_id}/reset-password", response_model=Message)

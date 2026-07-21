@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { AdminUser, Role } from "../types";
+import type { AdminUser, PermissionInfo, Role } from "../types";
 import { Badge, BulkBar, Empty, ListSkeleton, Modal, RowMenu, fmtDate, useSelection } from "../components/ui";
 import { confirmDialog, promptDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
@@ -11,11 +11,14 @@ export default function Users() {
   const { user: me } = useAuth();
   const [items, setItems] = useState<AdminUser[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [perms, setPerms] = useState<PermissionInfo[]>([]);
+  const [editPerms, setEditPerms] = useState<AdminUser | null>(null);
   const { sel, toggle, clear, allToggle } = useSelection();
 
   const load = () => api.listUsers().then(setItems);
   useEffect(() => {
     load();
+    api.listPermissions().then(setPerms).catch(() => setPerms([]));
   }, []);
 
   const bulkDelete = async () => {
@@ -105,6 +108,7 @@ export default function Users() {
                 </th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Delegated</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th className="actions-col"></th>
@@ -137,6 +141,15 @@ export default function Users() {
                     </select>
                   </td>
                   <td>
+                    {u.role === "admin" ? (
+                      <span className="hint">all access</span>
+                    ) : u.permissions.length ? (
+                      <span className="pill" title={u.permissions.join(", ")}>{u.permissions.length} delegated</span>
+                    ) : (
+                      <span className="hint">—</span>
+                    )}
+                  </td>
+                  <td>
                     <Badge status={u.is_active ? "completed" : "error"} />
                   </td>
                   <td>{fmtDate(u.created_at)}</td>
@@ -144,6 +157,7 @@ export default function Users() {
                     <RowMenu
                       items={[
                         { label: "Reset password", icon: "🔑", onClick: () => reset(u) },
+                        ...(u.role !== "admin" ? [{ label: "Delegated access", icon: "🎛", onClick: () => setEditPerms(u) }] : []),
                         ...(u.id === me?.id
                           ? []
                           : [
@@ -162,6 +176,7 @@ export default function Users() {
 
       {creating && (
         <CreateUser
+          perms={perms}
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
@@ -169,22 +184,48 @@ export default function Users() {
           }}
         />
       )}
+      {editPerms && (
+        <PermissionsModal
+          user={editPerms}
+          perms={perms}
+          onClose={() => setEditPerms(null)}
+          onSaved={() => { setEditPerms(null); load(); }}
+        />
+      )}
     </>
   );
 }
 
-function CreateUser({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function PermCheckboxes({ perms, value, onChange }: { perms: PermissionInfo[]; value: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (key: string) =>
+    onChange(value.includes(key) ? value.filter((k) => k !== key) : [...value, key]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {perms.map((p) => (
+        <label key={p.key} className="field check" style={{ margin: 0, cursor: "pointer" }}>
+          <input type="checkbox" checked={value.includes(p.key)} onChange={() => toggle(p.key)} />
+          <span>
+            {p.label} <span className="hint mono">({p.key})</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function CreateUser({ perms, onClose, onSaved }: { perms: PermissionInfo[]; onClose: () => void; onSaved: () => void }) {
   const { notify } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("operator");
+  const [grants, setGrants] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.createUser({ email, password, role });
+      await api.createUser({ email, password, role, permissions: role === "operator" ? grants : [] });
       notify("User created");
       onSaved();
     } catch (e) {
@@ -218,6 +259,12 @@ function CreateUser({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
             <option value="admin">admin</option>
           </select>
         </div>
+        {role === "operator" && (
+          <div className="field">
+            <label>Delegated access <span className="hint">(optional — admin areas this operator can use)</span></label>
+            <PermCheckboxes perms={perms} value={grants} onChange={setGrants} />
+          </div>
+        )}
         <div className="btn-row" style={{ justifyContent: "flex-end" }}>
           <button type="button" className="btn" onClick={onClose}>
             Cancel
@@ -227,6 +274,39 @@ function CreateUser({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function PermissionsModal({
+  user, perms, onClose, onSaved,
+}: { user: AdminUser; perms: PermissionInfo[]; onClose: () => void; onSaved: () => void }) {
+  const { notify } = useToast();
+  const [grants, setGrants] = useState<string[]>(user.permissions);
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.updateUser(user.id, { permissions: grants });
+      notify("Delegated access updated");
+      onSaved();
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "Update failed", "error");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`Delegated access — ${user.email}`} onClose={onClose}>
+      <p className="hint" style={{ marginBottom: 14 }}>
+        Grant this operator access to specific admin areas without making them a full admin.
+      </p>
+      <PermCheckboxes perms={perms} value={grants} onChange={setGrants} />
+      <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+        <button type="button" className="btn" onClick={onClose}>Cancel</button>
+        <button className="btn primary" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+      </div>
     </Modal>
   );
 }

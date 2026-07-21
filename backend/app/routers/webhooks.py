@@ -11,7 +11,10 @@ import httpx
 
 from ..csrf import csrf_protect
 from ..database import get_db
-from ..dependencies import get_current_user, require_admin
+from ..dependencies import get_current_user
+from ..permissions import require_permission
+
+require_admin = require_permission("webhooks:manage")
 from ..models import Webhook, utcnow
 from ..schemas.common import Message
 from ..schemas.webhook import WebhookCreate, WebhookOut, WebhookUpdate

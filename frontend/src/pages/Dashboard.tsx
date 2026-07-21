@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import type { AtRiskUser, Campaign, Champion, DashboardData, RiskOut, TimelinePoint } from "../types";
+import type { AtRiskUser, AttackSurface, Benchmark, Campaign, Champion, DashboardData, GeoPoint, RiskOut, TimelinePoint } from "../types";
 import { Badge, DashboardSkeleton, Empty, fmtDate } from "../components/ui";
 import Donut from "../components/Donut";
 import TimelineChart from "../components/TimelineChart";
@@ -22,6 +22,9 @@ export default function Dashboard() {
   const [atRisk, setAtRisk] = useState<AtRiskUser[]>([]);
   const [champions, setChampions] = useState<Champion[]>([]);
   const [risk, setRisk] = useState<RiskOut | null>(null);
+  const [geo, setGeo] = useState<GeoPoint[]>([]);
+  const [surface, setSurface] = useState<AttackSurface | null>(null);
+  const [bench, setBench] = useState<Benchmark | null>(null);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
 
   useEffect(() => {
@@ -30,6 +33,9 @@ export default function Dashboard() {
     api.getAtRisk().then(setAtRisk).catch(() => {});
     api.getChampions().then(setChampions).catch(() => {});
     api.getRisk().then(setRisk).catch(() => {});
+    api.getGeo().then(setGeo).catch(() => {});
+    api.getAttackSurface().then(setSurface).catch(() => {});
+    api.getBenchmark().then(setBench).catch(() => {});
     api.getTimeline().then(setTimeline).catch(() => {});
   }, []);
 
@@ -207,6 +213,89 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Geo breakdown — where clicks/submits came from */}
+      {geo.length > 0 && (
+        <div className="card animate-in" style={{ marginBottom: 20, animationDelay: "0.23s" }}>
+          <h2 style={{ margin: "0 0 4px", fontSize: 15 }}>🌍 Where clicks came from</h2>
+          <div className="page-sub" style={{ marginBottom: 14 }}>
+            Geolocated click &amp; submit locations across all campaigns
+          </div>
+          {geo.map((g) => {
+            const max = geo[0].count || 1;
+            const flag = g.code
+              ? g.code.toUpperCase().replace(/./g, (ch) => String.fromCodePoint(127397 + ch.charCodeAt(0)))
+              : "🌐";
+            return (
+              <div key={g.country} style={{ marginBottom: 9 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}>
+                  <span>{flag} {g.country}</span>
+                  <strong>{g.count}</strong>
+                </div>
+                <div style={{ height: 7, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ width: `${(g.count / max) * 100}%`, height: "100%", background: "var(--accent-grad)", transition: "width .6s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Benchmark — org rates vs admin-configured industry baseline */}
+      {bench && bench.enabled && (
+        <div className="card animate-in" style={{ marginBottom: 20, animationDelay: "0.225s" }}>
+          <h2 style={{ margin: "0 0 4px", fontSize: 15 }}>📊 You vs {bench.industry}</h2>
+          <div className="page-sub" style={{ marginBottom: 14 }}>
+            Your click &amp; report rates against the configured baseline (based on {bench.sample} results)
+          </div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <BenchBar label="Click rate" your={bench.your_click_rate} base={bench.baseline_click_rate} lowerBetter />
+            <BenchBar label="Report rate" your={bench.your_report_rate} base={bench.baseline_report_rate} />
+          </div>
+        </div>
+      )}
+
+      {/* Attack surface — most-targeted people and VIPs (VAP-style) */}
+      {surface && surface.people.length > 0 && (
+        <div className="card animate-in" style={{ marginBottom: 20, animationDelay: "0.235s" }}>
+          <h2 style={{ margin: "0 0 4px", fontSize: 15 }}>🎯 Attack surface & VIPs</h2>
+          <div className="page-sub" style={{ marginBottom: 12 }}>
+            Most-targeted recipients and your high-value targets.{" "}
+            {surface.vip_count > 0
+              ? <><strong>{surface.vip_count}</strong> VIP{surface.vip_count === 1 ? "" : "s"} flagged · <strong>{surface.vip_failed}</strong> have failed a simulation.</>
+              : <>Mark execs/finance/IT as ★ VIP in a group to track them here.</>}
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Recipient</th>
+                  <th>Targeted</th>
+                  <th>Failed</th>
+                  <th>Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {surface.people.map((p) => (
+                  <tr key={p.email}>
+                    <td>
+                      {p.is_vip && <span title="VIP" style={{ color: "#f59e0b", marginRight: 6 }}>★</span>}
+                      {p.email}
+                    </td>
+                    <td>{p.targeted}</td>
+                    <td>{p.failed}</td>
+                    <td>
+                      <span className="pill" style={{ color: p.risk === "high" ? "#dc2626" : p.risk === "medium" ? "#d97706" : "#16a34a" }}>
+                        {p.risk}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Security champions — who reports the phish (reward good instincts) */}
       {champions.length > 0 && (
         <div className="card animate-in" style={{ marginBottom: 20, animationDelay: "0.24s" }}>
@@ -315,6 +404,27 @@ function FunnelBar({ label, value, total, color, delay }: { label: string; value
       <span className="funnel-bar-count">
         {value} <small>/ {pct}%</small>
       </span>
+    </div>
+  );
+}
+
+function BenchBar({ label, your, base, lowerBetter }: { label: string; your: number; base: number; lowerBetter?: boolean }) {
+  const max = Math.max(your, base, 1);
+  const better = lowerBetter ? your <= base : your >= base;
+  const yourColor = better ? "#16a34a" : "#dc2626";
+  return (
+    <div style={{ flex: "1 1 240px", minWidth: 220 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+        <strong>{label}</strong>
+        <span style={{ color: yourColor, fontWeight: 700 }}>
+          you {your}% {better ? "✓" : "▲"}
+        </span>
+      </div>
+      <div style={{ position: "relative", height: 10, background: "var(--border)", borderRadius: 5, marginBottom: 4 }}>
+        <div style={{ width: `${(your / max) * 100}%`, height: "100%", background: yourColor, borderRadius: 5, transition: "width .6s ease" }} />
+        <div title={`baseline ${base}%`} style={{ position: "absolute", top: -3, left: `${(base / max) * 100}%`, width: 2, height: 16, background: "var(--text)", opacity: 0.7 }} />
+      </div>
+      <div className="hint">baseline {base}%</div>
     </div>
   );
 }

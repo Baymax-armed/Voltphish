@@ -87,6 +87,18 @@ function Icon({ name }: { name: string }): ReactNode {
         <circle cx="15" cy="16" r="2.4" fill="none" />
       </>
     ),
+    inbox: (
+      <>
+        <path d="M3 12h5l2 3h4l2-3h5" />
+        <path d="M4.5 6.5 3 12v6a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18v-6l-1.5-5.5A2 2 0 0 0 17.6 5H6.4a2 2 0 0 0-1.9 1.5z" />
+      </>
+    ),
+    cap: (
+      <>
+        <path d="M12 4 2 9l10 5 10-5-10-5z" />
+        <path d="M6 11v4.5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V11" />
+      </>
+    ),
   };
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -102,12 +114,21 @@ const NAV = [
   { to: "/pages", label: "Landing Pages", icon: "page" },
   { to: "/groups", label: "Groups & Targets", icon: "users" },
   { to: "/profiles", label: "Sending Profiles", icon: "server" },
-  { to: "/webhooks", label: "Webhooks", icon: "webhook", adminOnly: true },
+  { to: "/training", label: "Training", icon: "cap" },
+  { to: "/reported", label: "Reported Emails", icon: "inbox", perm: "reported:view" },
+  { to: "/webhooks", label: "Webhooks", icon: "webhook", perm: "webhooks:manage" },
   { to: "/apikeys", label: "API Keys", icon: "key" },
-  { to: "/users", label: "Users", icon: "user", adminOnly: true },
-  { to: "/settings", label: "Settings", icon: "gear", adminOnly: true },
+  { to: "/users", label: "Users", icon: "user", perm: "users:manage" },
+  { to: "/settings", label: "Settings", icon: "gear", perm: "settings:manage" },
   { to: "/docs", label: "Documentation", icon: "book" },
 ];
+
+function canSee(n: { perm?: string; adminOnly?: boolean }, user: { role?: string; permissions?: string[] } | null): boolean {
+  if (user?.role === "admin") return true;
+  if (n.adminOnly) return false;
+  if (n.perm) return !!user?.permissions?.includes(n.perm);
+  return true;
+}
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -131,7 +152,7 @@ export default function Layout() {
         <div className="brand">
           <img className="brand-img" src="/logo.png" alt="VoltPhish" />
         </div>
-        {NAV.filter((n) => !n.adminOnly || user?.role === "admin").map((n) => (
+        {NAV.filter((n) => canSee(n, user)).map((n) => (
           <NavLink
             key={n.to}
             to={n.to}

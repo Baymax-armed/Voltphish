@@ -48,7 +48,7 @@ def mount_spa(app: FastAPI) -> None:
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str, request: Request):
         # Never shadow the API or the tracking server.
-        if full_path.startswith(("api/", "t/", "c/", "p/", "q/", "r/", "s/", "learn/", "report", "assets/")):
+        if full_path.startswith(("api/", "t/", "c/", "p/", "q/", "a/", "r/", "s/", "learn/", "report", "assets/")):
             return JSONResponse(status_code=404, content={"detail": "Not found"})
         # Serve a real file if one exists (favicon, etc.), else the SPA shell.
         candidate = dist / full_path

@@ -65,6 +65,7 @@ def _stats(campaign: Campaign) -> CampaignStats:
         submitted=counts[ResultStatus.submitted],
         reported=counts[ResultStatus.reported],
         error=counts[ResultStatus.error],
+        attachments_opened=sum(1 for r in campaign.results if r.attachment_opened_at is not None),
     )
 
 

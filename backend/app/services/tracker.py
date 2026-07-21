@@ -33,6 +33,11 @@ def landing_url(phish_url: str, rid: str) -> str:
     return urljoin(_base(phish_url), f"p/{rid}")
 
 
+def attach_pixel_url(phish_url: str, rid: str) -> str:
+    """Tracking-pixel URL to embed in a lure attachment (records attachment_opened)."""
+    return urljoin(_base(phish_url), f"a/{rid}.png")
+
+
 def qr_url(phish_url: str, rid: str) -> str:
     """URL of the per-recipient QR-code PNG (encodes this recipient's click
     link). Scanning it opens /c/{rid} and records the click (quishing)."""

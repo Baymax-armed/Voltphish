@@ -44,3 +44,12 @@ class SiteImportRequest(BaseModel):
 class SiteImportResult(BaseModel):
     url: str
     html: str
+
+
+class AiPageRequest(BaseModel):
+    scenario: str = Field(min_length=4, max_length=2000)
+
+
+class AiPageResult(BaseModel):
+    name: str
+    html: str

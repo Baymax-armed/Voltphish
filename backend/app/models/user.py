@@ -27,6 +27,14 @@ class User(Base):
     # When true, the user is forced to set a new password before using the app
     # (e.g. after the generated first-run password or an admin reset).
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Two-factor auth (TOTP). Secret is AES-256-GCM encrypted at rest; a secret
+    # may exist while pending enrollment — `totp_enabled` gates the login check.
+    totp_secret_enc: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Granular RBAC: extra capabilities granted to a non-admin (CSV of permission
+    # keys). Admins implicitly hold every permission; this delegates specific
+    # admin areas (e.g. "users:manage") to an operator without full admin.
+    extra_permissions: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
 
     sessions: Mapped[list["Session"]] = relationship(

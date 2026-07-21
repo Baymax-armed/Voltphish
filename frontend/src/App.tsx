@@ -16,6 +16,8 @@ import ApiKeys from "./pages/ApiKeys";
 import Users from "./pages/Users";
 import Docs from "./pages/Docs";
 import Report from "./pages/Report";
+import Reported from "./pages/Reported";
+import Training from "./pages/Training";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
   if (!user) return <Login />;
   // Temporary-password accounts must set a new password before anything else.
   if (user.must_change_password) return <ForceChangePassword />;
+
+  const can = (perm: string) => user.role === "admin" || (user.permissions || []).includes(perm);
 
   return (
     <Routes>
@@ -37,10 +41,12 @@ export default function App() {
         <Route path="/groups" element={<Groups />} />
         <Route path="/profiles" element={<Profiles />} />
         <Route path="/apikeys" element={<ApiKeys />} />
+        <Route path="/training" element={<Training />} />
         <Route path="/docs" element={<Docs />} />
-        {user.role === "admin" && <Route path="/webhooks" element={<Webhooks />} />}
-        {user.role === "admin" && <Route path="/users" element={<Users />} />}
-        {user.role === "admin" && <Route path="/settings" element={<Settings />} />}
+        {can("reported:view") && <Route path="/reported" element={<Reported />} />}
+        {can("webhooks:manage") && <Route path="/webhooks" element={<Webhooks />} />}
+        {can("users:manage") && <Route path="/users" element={<Users />} />}
+        {can("settings:manage") && <Route path="/settings" element={<Settings />} />}
       </Route>
       <Route path="/print-report" element={<Report />} />
       <Route path="*" element={<Navigate to="/" replace />} />

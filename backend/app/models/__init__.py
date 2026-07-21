@@ -8,10 +8,18 @@ from .group import Group, Target
 from .job import Job, JobStatus
 from .page import LandingPage
 from .profile import SendingProfile
+from .reported_email import ReportedEmail, ReportStatus
 from .result import Result, ResultStatus
 from .setting import Setting
 from .sms_profile import SmsProfile
 from .template import Template
+from .training import (
+    Difficulty,
+    EnrollmentStatus,
+    QuizQuestion,
+    TrainingEnrollment,
+    TrainingModule,
+)
 from .user import Session, User, UserRole
 from .webhook import Webhook
 
@@ -38,4 +46,11 @@ __all__ = [
     "Attachment",
     "SmsProfile",
     "Setting",
+    "ReportedEmail",
+    "ReportStatus",
+    "TrainingModule",
+    "QuizQuestion",
+    "TrainingEnrollment",
+    "Difficulty",
+    "EnrollmentStatus",
 ]

@@ -12,6 +12,8 @@ from ..dependencies import get_current_user
 from ..models import LandingPage
 from ..schemas.common import Message
 from ..schemas.page import (
+    AiPageRequest,
+    AiPageResult,
     PageCreate,
     PageOut,
     PageSummary,
@@ -19,6 +21,7 @@ from ..schemas.page import (
     SiteImportRequest,
     SiteImportResult,
 )
+from ..services.ai import AiError, generate_landing_page, get_ai_config
 from ..services.siteimport import SiteImportError, fetch_site
 from ..services.ssrf import SsrfError
 
@@ -42,6 +45,19 @@ def import_site(payload: SiteImportRequest) -> SiteImportResult:
     except (SiteImportError, SsrfError) as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     return SiteImportResult(**result)
+
+
+@router.post("/ai-generate", response_model=AiPageResult)
+async def ai_generate_page(payload: AiPageRequest, db: DbSession = Depends(get_db)) -> AiPageResult:
+    """Draft a simulation landing page from a scenario using the configured LLM."""
+    cfg = get_ai_config(db)
+    try:
+        result = await generate_landing_page(
+            payload.scenario, provider=cfg["provider"], api_key=cfg["api_key"], model=cfg["model"], base_url=cfg["base_url"],
+        )
+    except AiError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    return AiPageResult(**result)
 
 
 @router.post("", response_model=PageOut, status_code=status.HTTP_201_CREATED)

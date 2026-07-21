@@ -32,5 +32,8 @@ class WebhookOut(BaseModel):
     is_active: bool
     has_secret: bool
     format: str
+    last_status: int | None = None
+    last_error: str | None = None
+    last_attempt_at: datetime | None = None
     created_at: datetime
     modified_at: datetime

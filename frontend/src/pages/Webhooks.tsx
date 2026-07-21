@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { Webhook } from "../types";
-import { Badge, BulkBar, CopyButton, Empty, ListSkeleton, Modal, RowMenu, useSelection } from "../components/ui";
+import { BulkBar, CopyButton, Empty, ListSkeleton, Modal, RowMenu, useSelection } from "../components/ui";
 import { confirmDialog } from "../components/dialog";
 import { useToast } from "../components/Toast";
 
@@ -43,6 +43,7 @@ export default function Webhooks() {
     } catch (e) {
       notify(e instanceof ApiError ? e.message : "Test failed", "error");
     } finally {
+      load(); // refresh so the delivery-health badge reflects this test
       setTesting(null);
     }
   };
@@ -136,7 +137,27 @@ export default function Webhooks() {
                   </td>
                   <td>{w.has_secret ? "set" : "—"}</td>
                   <td>
-                    <Badge status={w.is_active ? "completed" : "draft"} />
+                    {!w.is_active ? (
+                      <span className="pill" style={{ color: "var(--text-dim)" }}>disabled</span>
+                    ) : !w.last_attempt_at ? (
+                      <span className="pill" style={{ color: "var(--text-dim)" }}>not tested</span>
+                    ) : w.last_error ? (
+                      <span
+                        className="pill"
+                        style={{ background: "rgba(220,38,38,.14)", color: "#f87171" }}
+                        title={`${w.last_error} — ${new Date(w.last_attempt_at).toLocaleString()}`}
+                      >
+                        ✕ failed{w.last_status ? ` · HTTP ${w.last_status}` : ""}
+                      </span>
+                    ) : (
+                      <span
+                        className="pill"
+                        style={{ background: "rgba(34,197,94,.16)", color: "#4ade80" }}
+                        title={`Delivered (HTTP ${w.last_status}) — ${new Date(w.last_attempt_at).toLocaleString()}`}
+                      >
+                        ✓ delivered
+                      </span>
+                    )}
                   </td>
                   <td className="actions-col">
                     <div className="btn-row" style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>

@@ -193,6 +193,20 @@ def webhook_signature(secret: str, body: bytes) -> str:
     return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
 
+def _record_webhook_health(webhook_id: int, status_code: int | None, error: str | None) -> None:
+    """Persist the last delivery outcome so the UI reflects real health."""
+    db = SessionLocal()
+    try:
+        w = db.get(Webhook, webhook_id)
+        if w is not None:
+            w.last_attempt_at = utcnow()
+            w.last_status = status_code
+            w.last_error = (error or None) and error[:500]
+            db.commit()
+    finally:
+        db.close()
+
+
 @register("deliver_webhook")
 async def handle_deliver_webhook(payload: dict) -> None:
     webhook_id = int(payload["webhook_id"])
@@ -228,11 +242,16 @@ async def handle_deliver_webhook(payload: dict) -> None:
     body, headers = build_webhook_body(fmt, secret, event, campaign_name, email)
 
     # follow_redirects=False so a 3xx can't bounce us to an internal host.
-    async with httpx.AsyncClient(follow_redirects=False, timeout=10.0) as client:
-        resp = await client.post(url, content=body, headers=headers)
-        if resp.status_code >= 400:
-            # Raise so the queue retries with backoff.
-            raise RuntimeError(f"webhook returned HTTP {resp.status_code}")
+    try:
+        async with httpx.AsyncClient(follow_redirects=False, timeout=10.0) as client:
+            resp = await client.post(url, content=body, headers=headers)
+    except httpx.HTTPError as exc:
+        _record_webhook_health(webhook_id, None, f"unreachable ({type(exc).__name__})")
+        raise  # let the queue retry with backoff
+    if resp.status_code >= 400:
+        _record_webhook_health(webhook_id, resp.status_code, f"HTTP {resp.status_code}")
+        raise RuntimeError(f"webhook returned HTTP {resp.status_code}")  # queue retries
+    _record_webhook_health(webhook_id, resp.status_code, None)
 
 
 _EVENT_LABELS = {

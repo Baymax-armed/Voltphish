@@ -366,6 +366,9 @@ export interface Webhook {
   is_active: boolean;
   has_secret: boolean;
   format: string;
+  last_status: number | null;
+  last_error: string | null;
+  last_attempt_at: string | null;
   created_at: string;
   modified_at: string;
 }

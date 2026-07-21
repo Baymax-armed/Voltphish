@@ -33,16 +33,33 @@ def _to_out(w: Webhook) -> WebhookOut:
     return WebhookOut(
         id=w.id, name=w.name, url=w.url, is_active=w.is_active,
         has_secret=bool(w.secret_encrypted), format=getattr(w, "format", "generic"),
+        last_status=w.last_status, last_error=w.last_error,
+        last_attempt_at=w.last_attempt_at,
         created_at=w.created_at, modified_at=w.modified_at,
     )
 
 
-def _check_url(url: str) -> None:
+def _check_url(url: str, fmt: str = "generic") -> None:
     # Reject obviously-unsafe targets at save time (also re-checked at delivery).
     try:
         validate_url(url)
     except SsrfError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"URL rejected: {exc}")
+    # Format-specific sanity check so a wrong URL is caught on Save, not just Test.
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(url).hostname or "").lower()
+    if fmt == "teams" and not (host.endswith("webhook.office.com") or host.endswith("logic.azure.com")):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "That isn't a Teams Incoming Webhook / Workflow URL. Use a …webhook.office.com… "
+            "or …logic.azure.com… URL — not a teams.microsoft.com chat/channel link.",
+        )
+    if fmt == "slack" and not host.endswith("slack.com"):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "That isn't a Slack Incoming Webhook URL (it should be on hooks.slack.com).",
+        )
 
 
 @router.get("", response_model=list[WebhookOut])
@@ -52,7 +69,7 @@ def list_webhooks(db: DbSession = Depends(get_db)) -> list[WebhookOut]:
 
 @router.post("", response_model=WebhookOut, status_code=status.HTTP_201_CREATED)
 def create_webhook(payload: WebhookCreate, db: DbSession = Depends(get_db)) -> WebhookOut:
-    _check_url(str(payload.url))
+    _check_url(str(payload.url), payload.format)
     w = Webhook(
         name=payload.name, url=str(payload.url),
         secret_encrypted=encrypt_secret(payload.secret), is_active=payload.is_active,
@@ -73,7 +90,7 @@ def update_webhook(webhook_id: int, payload: WebhookUpdate, db: DbSession = Depe
     w = db.get(Webhook, webhook_id)
     if w is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Webhook not found")
-    _check_url(str(payload.url))
+    _check_url(str(payload.url), payload.format)
     w.name = payload.name
     w.url = str(payload.url)
     w.is_active = payload.is_active
@@ -96,9 +113,17 @@ async def test_webhook(webhook_id: int, db: DbSession = Depends(get_db)) -> Mess
     w = db.get(Webhook, webhook_id)
     if w is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Webhook not found")
+
+    def _record(*, status_code: int | None, error: str | None) -> None:
+        w.last_attempt_at = utcnow()
+        w.last_status = status_code
+        w.last_error = (error or None) and error[:500]
+        db.commit()
+
     try:
         validate_url(w.url)
     except SsrfError as exc:
+        _record(status_code=None, error=f"URL rejected: {exc}")
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"URL rejected: {exc}")
 
     secret = decrypt_secret(w.secret_encrypted) or ""
@@ -119,12 +144,14 @@ async def test_webhook(webhook_id: int, db: DbSession = Depends(get_db)) -> Mess
         async with httpx.AsyncClient(follow_redirects=False, timeout=10.0) as client:
             resp = await client.post(w.url, content=body, headers=headers)
     except httpx.HTTPError as exc:
+        _record(status_code=None, error=f"unreachable ({type(exc).__name__})")
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             "Couldn't reach that URL. Make sure it's a valid Incoming Webhook URL "
             f"(not a channel or chat link). [{type(exc).__name__}]",
         )
     if resp.status_code >= 400:
+        _record(status_code=resp.status_code, error=f"HTTP {resp.status_code}")
         hint = ""
         if fmt in ("slack", "teams"):
             hint = (
@@ -135,6 +162,7 @@ async def test_webhook(webhook_id: int, db: DbSession = Depends(get_db)) -> Mess
             status.HTTP_502_BAD_GATEWAY,
             f"The URL returned HTTP {resp.status_code}, so the test message was not delivered.{hint}",
         )
+    _record(status_code=resp.status_code, error=None)
     return Message(detail=f"Test notification delivered (HTTP {resp.status_code}). Check your channel.")
 
 

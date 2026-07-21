@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { AddinConfig, ReportedEmail, ReportedSummary, ReportStatus } from "../types";
 import { useToast } from "../components/Toast";
+import { confirmDialog } from "../components/dialog";
 
 const STATUSES: ReportStatus[] = ["new", "reviewing", "malicious", "benign", "closed"];
 
@@ -37,6 +38,13 @@ export default function Reported() {
   };
 
   const remove = async (id: number) => {
+    const ok = await confirmDialog({
+      title: "Delete report",
+      message: "Delete this reported email? This removes it from the queue and can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteReported(id);
       setRows((rs) => (rs || []).filter((r) => r.id !== id));
@@ -175,7 +183,13 @@ function AddinSetup() {
   };
 
   const regen = async () => {
-    if (!confirm("Regenerate the report token? Existing add-in installs will stop working until redeployed.")) return;
+    const ok = await confirmDialog({
+      title: "Regenerate report token",
+      message: "Regenerate the report token? Existing add-in installs will stop working until they're redeployed with the new token.",
+      confirmLabel: "Regenerate",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       setCfg(await api.regenerateAddinToken());

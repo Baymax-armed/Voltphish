@@ -449,6 +449,13 @@ function TemplateForm({
 
   const removeAttachment = async (att: Attachment) => {
     if (!template) return;
+    const ok = await confirmDialog({
+      title: "Remove attachment",
+      message: `Remove “${att.filename}” from this template?`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteAttachment(template.id, att.id);
       setAttachments((a) => a.filter((x) => x.id !== att.id));

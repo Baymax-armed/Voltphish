@@ -44,14 +44,19 @@ export default function CampaignDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cid]);
 
-  // Live auto-refresh (toggleable). Keeps pulling so late opens/clicks show up.
+  // A campaign only produces new events while it's live; once it's completed
+  // (or a draft/errored), polling would just hammer the server for nothing.
+  const isLive = c?.status === "in_progress" || c?.status === "scheduled";
+
+  // Live auto-refresh (toggleable). Keeps pulling so late opens/clicks show up,
+  // and stops on its own when the campaign reaches a terminal state.
   useEffect(() => {
     if (timer.current) window.clearInterval(timer.current);
-    if (auto) timer.current = window.setInterval(() => load(), AUTO_REFRESH_MS);
+    if (auto && isLive) timer.current = window.setInterval(() => load(), AUTO_REFRESH_MS);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [auto, load]);
+  }, [auto, isLive, load]);
 
   const doLaunch = async (authorization_ref: string) => {
     setBusy(true);
@@ -85,15 +90,17 @@ export default function CampaignDetail() {
         </div>
         <div className="btn-row" style={{ alignItems: "center" }}>
           <span className="updated">
-            {auto && <span className="live-dot" title="live" />}
+            {auto && isLive && <span className="live-dot" title="live" />}
             {updatedAt ? `updated ${updatedAt.toLocaleTimeString()}` : ""}
           </span>
           <button className="btn" onClick={() => load(true)} disabled={refreshing} title="Refresh now">
             <span className={refreshing ? "spin" : ""}>⟳</span> Refresh
           </button>
-          <button className="btn sm" onClick={() => setAuto((a) => !a)} title="Toggle live auto-refresh">
-            {auto ? "⏸ Live" : "▶ Live"}
-          </button>
+          {isLive && (
+            <button className="btn sm" onClick={() => setAuto((a) => !a)} title="Toggle live auto-refresh">
+              {auto ? "⏸ Live" : "▶ Live"}
+            </button>
+          )}
           <a className="btn" href={`/api/v1/campaigns/${cid}/results.csv`} download>
             ⭳ CSV
           </a>

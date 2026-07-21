@@ -12,6 +12,7 @@ export const TRAINING_OUTCOMES: { value: string; label: string }[] = [
 ];
 import { useToast } from "../components/Toast";
 import { Modal } from "../components/ui";
+import { confirmDialog } from "../components/dialog";
 
 const DIFFS: Difficulty[] = ["beginner", "intermediate", "advanced"];
 const DIFF_COLOR: Record<Difficulty, string> = {
@@ -43,7 +44,13 @@ export default function Training() {
   useEffect(load, []);
 
   const remove = async (m: TrainingModule) => {
-    if (!confirm(`Delete “${m.title}” and all its enrollments?`)) return;
+    const ok = await confirmDialog({
+      title: "Delete training module",
+      message: `Delete “${m.title}” and all of its enrollments? This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteModule(m.id);
       load();

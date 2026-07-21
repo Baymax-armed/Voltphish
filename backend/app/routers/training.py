@@ -20,6 +20,8 @@ from ..models import (
     EnrollmentStatus,
     Group,
     QuizQuestion,
+    Result,
+    ResultStatus,
     Target,
     TrainingEnrollment,
     TrainingModule,
@@ -91,9 +93,44 @@ class EnrollmentOut(BaseModel):
     completed_at: str | None
 
 
+# Campaign-outcome → who to remediate. The core "train the people who failed" loop.
+def _outcome_filter(outcome: str):
+    return {
+        "all": None,
+        "clicked": Result.status.in_([ResultStatus.clicked, ResultStatus.submitted]),
+        "submitted": Result.status == ResultStatus.submitted,
+        "opened": Result.status == ResultStatus.opened,
+        "reported": Result.status == ResultStatus.reported,
+        "no_action": Result.status.in_(
+            [ResultStatus.sent, ResultStatus.scheduled, ResultStatus.sending, ResultStatus.error]
+        ),
+    }.get(outcome, None)
+
+
+def _campaign_emails(db: DbSession, campaign_id: int, outcome: str) -> set[str]:
+    q = select(Result.email).where(Result.campaign_id == campaign_id)
+    f = _outcome_filter(outcome)
+    if outcome != "all" and f is not None:
+        q = q.where(f)
+    return {r[0].strip().lower() for r in db.execute(q).all() if r[0]}
+
+
 class AssignIn(BaseModel):
     emails: list[str] = Field(default_factory=list)
     group_id: int | None = None
+    # Remediation targeting: enroll a campaign's audience, optionally by outcome.
+    campaign_id: int | None = None
+    outcome: str = "all"  # all | clicked | submitted | opened | reported | no_action
+
+
+class AudienceIn(BaseModel):
+    campaign_id: int
+    outcome: str = "all"
+
+
+class AudienceOut(BaseModel):
+    count: int          # unique recipients matching the outcome
+    total: int          # total recipients in the campaign
 
 
 class LeaderboardRow(BaseModel):
@@ -230,6 +267,8 @@ def assign_module(module_id: int, payload: AssignIn, db: DbSession = Depends(get
     if payload.group_id is not None:
         rows = db.execute(select(Target.email).where(Target.group_id == payload.group_id)).all()
         emails |= {r[0].strip().lower() for r in rows if r[0]}
+    if payload.campaign_id is not None:
+        emails |= _campaign_emails(db, payload.campaign_id, payload.outcome)
     if not emails:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No valid recipients to assign")
 
@@ -249,6 +288,16 @@ def assign_module(module_id: int, payload: AssignIn, db: DbSession = Depends(get
         created += 1
     db.commit()
     return Message(detail=f"Assigned to {created} recipient(s).")
+
+
+@router.post("/audience", response_model=AudienceOut)
+def audience_preview(payload: AudienceIn, db: DbSession = Depends(get_db)) -> AudienceOut:
+    """Preview how many of a campaign's recipients match an outcome — so the UI
+    can show 'this will enroll 7 of 20' before assigning."""
+    total = db.execute(
+        select(func.count(Result.id)).where(Result.campaign_id == payload.campaign_id)
+    ).scalar_one()
+    return AudienceOut(count=len(_campaign_emails(db, payload.campaign_id, payload.outcome)), total=total)
 
 
 class SendInvitesIn(BaseModel):

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
-import type { CampaignDetail as Detail, EventItem } from "../types";
+import type { CampaignDetail as Detail, EventItem, TrainingModule } from "../types";
 import { Badge, CopyButton, DetailSkeleton, Modal, fmtDate } from "../components/ui";
+import { TRAINING_OUTCOMES } from "./Training";
 import Donut from "../components/Donut";
 import { useToast } from "../components/Toast";
 
@@ -19,6 +20,7 @@ export default function CampaignDetail() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [auto, setAuto] = useState(true);
   const [launchOpen, setLaunchOpen] = useState(false);
+  const [trainOpen, setTrainOpen] = useState<string>("");
   const timer = useRef<number | null>(null);
 
   const load = useCallback(
@@ -95,6 +97,11 @@ export default function CampaignDetail() {
           <a className="btn" href={`/api/v1/campaigns/${cid}/results.csv`} download>
             ⭳ CSV
           </a>
+          {(s.clicked > 0 || s.submitted > 0 || s.opened > 0) && (
+            <button className="btn" onClick={() => setTrainOpen("bulk")} title="Enrol people from this campaign into a training module">
+              🎓 Assign training
+            </button>
+          )}
           {(c.status === "draft" || c.status === "scheduled") && (
             <button className="btn primary" onClick={() => setLaunchOpen(true)} disabled={busy}>
               {c.status === "scheduled" ? "▶ Launch now" : "▶ Launch"}
@@ -104,6 +111,16 @@ export default function CampaignDetail() {
       </div>
 
       {launchOpen && <LaunchDialog busy={busy} onCancel={() => setLaunchOpen(false)} onConfirm={doLaunch} />}
+
+      {trainOpen && (
+        <CampaignTrainingModal
+          campaignId={cid}
+          campaignName={c.name}
+          singleEmail={trainOpen === "bulk" ? null : trainOpen}
+          onClose={() => setTrainOpen("")}
+          onDone={(msg) => { setTrainOpen(""); notify(msg, "ok"); }}
+        />
+      )}
 
       {c.status === "scheduled" && c.launch_at && (
         <div className="banner">
@@ -143,6 +160,7 @@ export default function CampaignDetail() {
                 <th>Status</th>
                 <th>Sent</th>
                 <th>Last activity</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +188,12 @@ export default function CampaignDetail() {
                   </td>
                   <td>{fmtDate(r.sent_at)}</td>
                   <td>{fmtDate(r.last_event_at)}</td>
+                  <td>
+                    <button className="btn sm ghost" title={`Assign training to ${r.email}`}
+                      onClick={() => setTrainOpen(r.email)}>
+                      🎓 Train
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -231,6 +255,104 @@ function eventBadge(type: string): string {
 function ridEmail(c: Detail, rid: string | null): string {
   if (!rid) return "—";
   return c.results.find((r) => r.rid === rid)?.email ?? rid;
+}
+
+function CampaignTrainingModal({
+  campaignId, campaignName, singleEmail, onClose, onDone,
+}: {
+  campaignId: number;
+  campaignName: string;
+  singleEmail: string | null;
+  onClose: () => void;
+  onDone: (msg: string) => void;
+}) {
+  const { notify } = useToast();
+  const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [moduleId, setModuleId] = useState<number | "">("");
+  const [outcome, setOutcome] = useState("clicked");
+  const [preview, setPreview] = useState<{ count: number; total: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api.listModules().then((m) => {
+      setModules(m);
+      if (m.length === 1) setModuleId(m[0].id);
+    }).catch(() => setModules([]));
+  }, []);
+
+  // Live "this will enrol N of M" preview for the bulk-by-outcome flow.
+  useEffect(() => {
+    if (singleEmail) { setPreview(null); return; }
+    let alive = true;
+    api.trainingAudience({ campaign_id: campaignId, outcome })
+      .then((r) => { if (alive) setPreview(r); })
+      .catch(() => { if (alive) setPreview(null); });
+    return () => { alive = false; };
+  }, [campaignId, outcome, singleEmail]);
+
+  const submit = async () => {
+    if (moduleId === "") { notify("Pick a training module", "error"); return; }
+    setBusy(true);
+    try {
+      const r = singleEmail
+        ? await api.assignModule(Number(moduleId), { emails: [singleEmail] })
+        : await api.assignModule(Number(moduleId), { campaign_id: campaignId, outcome });
+      onDone(r.detail);
+    } catch (e) {
+      notify(e instanceof ApiError ? e.message : "Assign failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={singleEmail ? `Assign training to ${singleEmail}` : "Assign training from this campaign"}
+      onClose={onClose}
+    >
+      <div className="field">
+        <label>Training module</label>
+        <select value={moduleId} onChange={(e) => setModuleId(e.target.value === "" ? "" : Number(e.target.value))}>
+          <option value="">— pick a module —</option>
+          {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+        </select>
+        {modules.length === 0 && (
+          <span className="hint" style={{ marginTop: 6 }}>
+            No training modules yet — create one on the <Link to="/training">Training</Link> page first.
+          </span>
+        )}
+      </div>
+
+      {singleEmail ? (
+        <div className="banner" style={{ margin: 0 }}>
+          Enrols <strong>{singleEmail}</strong> and gives them a unique training link. Use <strong>✉ Email links</strong>
+          {" "}on the Training page to send it.
+        </div>
+      ) : (
+        <>
+          <div className="field">
+            <label>Who from “{campaignName}”</label>
+            <select value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+              {TRAINING_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {preview && (
+              <span className="hint" style={{ marginTop: 6 }}>
+                This will enrol <strong style={{ color: "var(--accent)" }}>{preview.count}</strong> of {preview.total} recipient(s).
+                Already-enrolled people are skipped.
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+        <button className="btn" onClick={onClose}>Cancel</button>
+        <button className="btn primary" onClick={submit} disabled={busy || moduleId === ""}>
+          {busy ? "Assigning…" : "Assign"}
+        </button>
+      </div>
+    </Modal>
+  );
 }
 
 function LaunchDialog({

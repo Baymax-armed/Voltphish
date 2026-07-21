@@ -116,8 +116,10 @@ export const api = {
   updateModule: (id: number, m: Record<string, unknown>) =>
     request<TrainingModule>("PUT", `/training/modules/${id}`, m),
   deleteModule: (id: number) => request<{ detail: string }>("DELETE", `/training/modules/${id}`),
-  assignModule: (id: number, p: { emails?: string[]; group_id?: number | null }) =>
+  assignModule: (id: number, p: { emails?: string[]; group_id?: number | null; campaign_id?: number | null; outcome?: string }) =>
     request<{ detail: string }>("POST", `/training/modules/${id}/assign`, p),
+  trainingAudience: (p: { campaign_id: number; outcome: string }) =>
+    request<{ count: number; total: number }>("POST", "/training/audience", p),
   sendTrainingInvites: (id: number, p: { profile_id: number; only_pending?: boolean }) =>
     request<{ detail: string }>("POST", `/training/modules/${id}/send`, p),
   listEnrollments: (moduleId?: number) =>

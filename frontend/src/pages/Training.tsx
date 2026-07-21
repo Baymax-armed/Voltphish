@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { AutoEnrollConfig, Difficulty, GroupSummary, Profile, QuizQuestion, RecommendationRow, TrainingModule, TrainingSummary, LeaderboardRow } from "../types";
+import type { AutoEnrollConfig, Campaign, Difficulty, GroupSummary, Profile, QuizQuestion, RecommendationRow, TrainingModule, TrainingSummary, LeaderboardRow } from "../types";
+
+export const TRAINING_OUTCOMES: { value: string; label: string }[] = [
+  { value: "all", label: "Everyone in the campaign" },
+  { value: "clicked", label: "Clicked the link (incl. submitters)" },
+  { value: "submitted", label: "Submitted data (worst)" },
+  { value: "opened", label: "Opened only (didn't click)" },
+  { value: "reported", label: "Reported it (good instinct)" },
+  { value: "no_action", label: "No action (didn't open)" },
+];
 import { useToast } from "../components/Toast";
 import { Modal } from "../components/ui";
 
@@ -394,23 +403,50 @@ function Recommendations() {
   );
 }
 
-function AssignModal({ module, onClose, onDone }: { module: TrainingModule; onClose: () => void; onDone: () => void }) {
+function AssignModal({
+  module, onClose, onDone, defaultCampaignId, defaultOutcome,
+}: {
+  module: TrainingModule; onClose: () => void; onDone: () => void;
+  defaultCampaignId?: number; defaultOutcome?: string;
+}) {
   const { notify } = useToast();
   const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [groupId, setGroupId] = useState<number | "">("");
+  const [campaignId, setCampaignId] = useState<number | "">(defaultCampaignId ?? "");
+  const [outcome, setOutcome] = useState(defaultOutcome ?? "clicked");
   const [emails, setEmails] = useState("");
+  const [preview, setPreview] = useState<{ count: number; total: number } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     api.listGroups().then(setGroups).catch(() => setGroups([]));
+    api.listCampaigns().then(setCampaigns).catch(() => setCampaigns([]));
   }, []);
+
+  // Live audience count for the "train the people who failed" flow.
+  useEffect(() => {
+    if (campaignId === "") { setPreview(null); return; }
+    let alive = true;
+    api.trainingAudience({ campaign_id: Number(campaignId), outcome })
+      .then((r) => { if (alive) setPreview(r); })
+      .catch(() => { if (alive) setPreview(null); });
+    return () => { alive = false; };
+  }, [campaignId, outcome]);
 
   const submit = async () => {
     const list = emails.split(/[\s,;]+/).map((e) => e.trim()).filter((e) => e.includes("@"));
-    if (list.length === 0 && groupId === "") { notify("Add emails or pick a group", "error"); return; }
+    if (list.length === 0 && groupId === "" && campaignId === "") {
+      notify("Pick a campaign, a group, or paste emails", "error"); return;
+    }
     setBusy(true);
     try {
-      const r = await api.assignModule(module.id, { emails: list, group_id: groupId === "" ? null : Number(groupId) });
+      const r = await api.assignModule(module.id, {
+        emails: list,
+        group_id: groupId === "" ? null : Number(groupId),
+        campaign_id: campaignId === "" ? null : Number(campaignId),
+        outcome,
+      });
       notify(r.detail, "ok");
       onDone();
     } catch (err) {
@@ -423,21 +459,44 @@ function AssignModal({ module, onClose, onDone }: { module: TrainingModule; onCl
   return (
     <Modal title={`Assign “${module.title}”`} onClose={onClose}>
       <div>
+        <div className="field">
+          <label>🎯 From a campaign <span className="hint">— train the people who failed</span></label>
+          <select value={campaignId} onChange={(e) => setCampaignId(e.target.value === "" ? "" : Number(e.target.value))}>
+            <option value="">— none —</option>
+            {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        {campaignId !== "" && (
           <div className="field">
-            <label>To a group</label>
+            <label>Who from that campaign</label>
+            <select value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+              {TRAINING_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {preview && (
+              <span className="hint" style={{ marginTop: 6 }}>
+                This will enroll <strong style={{ color: "var(--accent)" }}>{preview.count}</strong> of {preview.total} recipient(s).
+              </span>
+            )}
+          </div>
+        )}
+        <div className="row2">
+          <div className="field">
+            <label>Or a group</label>
             <select value={groupId} onChange={(e) => setGroupId(e.target.value === "" ? "" : Number(e.target.value))}>
               <option value="">— none —</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.target_count})</option>)}
             </select>
           </div>
           <div className="field">
-            <label>And/or paste emails</label>
-            <textarea rows={4} value={emails} onChange={(e) => setEmails(e.target.value)}
+            <label>Or paste emails</label>
+            <textarea rows={2} value={emails} onChange={(e) => setEmails(e.target.value)}
               placeholder="alice@corp.com, bob@corp.com" />
           </div>
-          <div className="banner" style={{ margin: 0 }}>
-            Each person gets a unique training link. Already-enrolled (incomplete) people are skipped.
-          </div>
+        </div>
+        <div className="banner" style={{ margin: 0 }}>
+          Each person gets a unique training link. Already-enrolled (incomplete) people are skipped. Sources combine
+          (deduped). After assigning, use <strong>✉ Email links</strong> to send them.
+        </div>
         <div className="btn-row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={submit} disabled={busy}>{busy ? "Assigning…" : "Assign"}</button>

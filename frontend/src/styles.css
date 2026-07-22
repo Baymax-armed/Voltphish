@@ -74,14 +74,16 @@
   --border: #e4e8f1;
   --border-soft: #eef1f6;
   --text: #0f1729;
-  --text-dim: #58637a;
-  --accent: #5b5bd6;
-  --accent-strong: #4f46e5;
-  --violet: #7c3aed;
-  --good: #059669;
+  --text-dim: #4a5568;
+  /* Light mode: every foreground hue is deliberately DEEP so no text/label ever
+     reads as a pale/washed-out light colour on the white surfaces. */
+  --accent: #4338ca;
+  --accent-strong: #3730a3;
+  --violet: #6d28d9;
+  --good: #047857;
   --warn: #b45309;
   --bad: #e11d48;
-  --accent-grad: linear-gradient(135deg, #5b5bd6 0%, #8b5cf6 100%);
+  --accent-grad: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
   --glow-1: rgba(91, 91, 214, 0.05);
   --glow-2: rgba(124, 58, 237, 0.045);
   --shadow-sm: 0 1px 2px rgba(16,24,40,0.06);

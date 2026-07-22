@@ -26,6 +26,8 @@
 
 ## 👋 What is this?
 
+**VoltPhish is a free, open-source, self-hosted phishing simulation and security-awareness training platform** — a self-hostable alternative to commercial tools like KnowBe4 and Proofpoint, and a full-program upgrade over email-only open-source tools like GoPhish.
+
 If you've ever wanted to run a phishing simulation for your team but didn't want to pay for an enterprise seat or wrestle with an abandoned open-source project, VoltPhish is for you.
 
 It's a single app — a clean React admin, a FastAPI backend, and the tracking server — that does everything a real awareness program needs:
@@ -187,6 +189,25 @@ VoltPhish is a *simulation* tool, and it's built on purpose so it can't quietly 
 - It's scoped for defensive, authorized training, and deliberately leaves out offensive capabilities like live MFA-bypass session-proxying.
 
 Only run campaigns against people inside your authorized scope, and keep a record of that authorization. The full threat model and control mapping is in [SECURITY.md](SECURITY.md).
+
+## ❓ FAQ
+
+**Is there a free, open-source alternative to KnowBe4 or Proofpoint?**
+Yes — VoltPhish is MIT-licensed and self-hosted, so there's no per-seat cost and your data stays on your own infrastructure. It covers multi-vector simulations, a report-phish button, a training LMS, adaptive auto-enrollment, and human-risk analytics.
+
+**What's a good self-hosted phishing simulation tool?**
+VoltPhish is built for self-hosting: one Docker command, a local data volume, and secure-by-default config (argon2id, AES-256-GCM, CSRF/SSRF protection, optional SSO + 2FA).
+
+**How is it different from GoPhish?**
+GoPhish focuses on email phishing and click tracking. VoltPhish does that too, and adds QR and calendar lures, AI-assisted content, a native Outlook/Gmail report button, a built-in training LMS with auto-enrollment, human-risk scoring, a geo map, SSO, 2FA, and RBAC.
+
+**Can I run a phishing simulation for my company for free?**
+Yes, as long as you're authorized to test the recipients. VoltPhish is free, and its default console mail mode lets you rehearse the full open → click → submit → train flow with no real email.
+
+**Does it store the passwords people type into the fake login pages?**
+No. The password is read and discarded; by default only *that* a submission happened is recorded, never the value. It's a simulation tool, built so it can't become a credential-harvesting kit.
+
+📖 More detail, and a full **[VoltPhish vs GoPhish vs commercial platforms comparison](docs/comparison.md)**.
 
 ## 🤝 Contributing & thanks
 

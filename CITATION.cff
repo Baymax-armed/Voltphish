@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use VoltPhish in your work, please cite it using the metadata below."
+title: "VoltPhish"
+abstract: >-
+  VoltPhish is a free, open-source, self-hosted phishing simulation and
+  security-awareness training platform. It runs the full awareness program —
+  send an email or QR phishing lure, track who clicks, train them at the moment
+  they slip, catch the employees who report it, and measure human risk over
+  time — from a single Docker container. A self-hostable alternative to
+  commercial tools like KnowBe4 and Proofpoint, and a full-program upgrade over
+  email-only open-source tools like GoPhish.
+type: software
+authors:
+  - name: "VoltPhish contributors"
+url: "https://github.com/Baymax-armed/Voltphish"
+repository-code: "https://github.com/Baymax-armed/Voltphish"
+license: MIT
+keywords:
+  - phishing-simulation
+  - phishing-simulator
+  - security-awareness
+  - security-awareness-training
+  - self-hosted
+  - open-source
+  - gophish-alternative
+  - knowbe4-alternative
+  - quishing
+  - qr-phishing
+  - phishing-awareness
+  - security-training
+  - infosec
+  - red-team
+  - blue-team

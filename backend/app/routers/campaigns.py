@@ -134,6 +134,7 @@ def create_campaign(payload: CampaignCreate, db: DbSession = Depends(get_db)) ->
         send_jitter=payload.send_jitter,
         business_hours_only=payload.business_hours_only,
         send_timezone=payload.send_timezone,
+        send_interval_seconds=payload.send_interval_seconds,
         auto_enroll_trigger=payload.auto_enroll_trigger,
         auto_enroll_module_id=payload.auto_enroll_module_id if payload.auto_enroll_trigger != "off" else None,
         auto_enroll_email=payload.auto_enroll_email,

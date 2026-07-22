@@ -4,7 +4,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, Table
+from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -82,6 +82,11 @@ class Campaign(Base):
     send_jitter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     business_hours_only: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     send_timezone: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    # Throttle: fixed pause (seconds) inserted between each send so a burst
+    # doesn't trip the SMTP provider's rate limits or get the sender blocked.
+    # 0 = no pause (send as fast as the queue allows) — the default, since not
+    # every run needs throttling. UI presets: 3 / 5 / 10 / 30s.
+    send_interval_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
     template: Mapped["object"] = relationship("Template")

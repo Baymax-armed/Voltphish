@@ -470,6 +470,7 @@ export interface Campaign {
   send_jitter?: boolean;
   business_hours_only?: boolean;
   send_timezone?: string;
+  send_interval_seconds?: number;
 }
 
 export interface Person {

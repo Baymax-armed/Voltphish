@@ -93,9 +93,16 @@ def enqueue_campaign(db: DbSession, campaign: Campaign) -> int:
     results = _existing_results(db, campaign.id)
     n = len(results)
     start = utcnow()
-    # Drip: spread run_after evenly across [now, send_by_at]; else all now.
+    # Spacing between consecutive sends (seconds). Two possible sources:
+    #  • a fixed per-email pause (throttle) so a burst doesn't trip the SMTP
+    #    provider's rate limits / get the sender blocked — applies even on an
+    #    immediate launch (no drip window needed);
+    #  • a drip window [now, send_by_at] that spreads sends evenly.
+    # The explicit throttle wins when set; otherwise fall back to the window.
     gap = 0.0
-    if campaign.send_by_at is not None and n > 1:
+    if campaign.send_interval_seconds and campaign.send_interval_seconds > 0:
+        gap = float(campaign.send_interval_seconds)
+    elif campaign.send_by_at is not None and n > 1:
         window = (campaign.send_by_at - start).total_seconds()
         gap = max(window, 0) / (n - 1)
 

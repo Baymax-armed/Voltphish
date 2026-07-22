@@ -185,6 +185,8 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
     send_by_at: "",
     send_jitter: prefill?.send_jitter ?? false,
     business_hours_only: prefill?.business_hours_only ?? false,
+    send_interval_seconds: prefill?.send_interval_seconds ?? 0, // 0 = no pause between emails
+
     tunnel_ttl: 1440, // minutes the public link stays live (24h default; 0 = until deleted)
     auto_enroll_trigger: prefill?.auto_enroll_trigger ?? "off", // off | clicked | submitted
     auto_enroll_module_id: prefill?.auto_enroll_module_id ?? 0, // 0 => adaptive pick
@@ -322,6 +324,7 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
         send_jitter: f.send_jitter,
         business_hours_only: f.business_hours_only,
         send_timezone: tz,
+        send_interval_seconds: f.send_interval_seconds,
         auto_enroll_trigger: f.auto_enroll_trigger,
         auto_enroll_module_id:
           f.auto_enroll_trigger !== "off" && f.auto_enroll_module_id ? f.auto_enroll_module_id : null,
@@ -731,6 +734,24 @@ function CampaignForm({ onClose, prefill }: { onClose: () => void; prefill?: Cam
                   </div>
                   <div className="hint" style={{ margin: "-6px 0 6px" }}>
                     🕑 Times are in your local timezone (<strong>{tz}</strong>).
+                  </div>
+                  <div className="field">
+                    <label>
+                      ⏸️ Pause between each email{" "}
+                      <span className="hint">
+                        — throttle sends so a burst doesn't get your SMTP server rate-limited or blocked
+                      </span>
+                    </label>
+                    <select
+                      value={f.send_interval_seconds}
+                      onChange={(e) => set("send_interval_seconds", Number(e.target.value))}
+                    >
+                      <option value={0}>No pause — send as fast as possible</option>
+                      <option value={3}>3 seconds between each</option>
+                      <option value={5}>5 seconds between each</option>
+                      <option value={10}>10 seconds between each</option>
+                      <option value={30}>30 seconds between each</option>
+                    </select>
                   </div>
                   {scheduled && (
                     <>

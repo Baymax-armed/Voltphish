@@ -38,6 +38,9 @@ class CampaignCreate(BaseModel):
     send_jitter: bool = False
     business_hours_only: bool = False
     send_timezone: str = Field(default="", max_length=64)
+    # Throttle: fixed pause (seconds) between each email so a burst doesn't get
+    # the SMTP sender rate-limited/blocked. 0 = no pause (default). Bounded 1h.
+    send_interval_seconds: int = Field(default=0, ge=0, le=3600)
     # Just-in-time remediation (NG-013): auto-enrol failers into a module.
     auto_enroll_trigger: str = "off"  # off | clicked | submitted
     auto_enroll_module_id: int | None = None
@@ -94,6 +97,7 @@ class CampaignOut(BaseModel):
     send_jitter: bool = False
     business_hours_only: bool = False
     send_timezone: str = ""
+    send_interval_seconds: int = 0
     model_config = {"from_attributes": True}
 
 

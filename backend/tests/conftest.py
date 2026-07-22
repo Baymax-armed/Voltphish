@@ -17,6 +17,8 @@ os.environ.update(
     VOLTPHISH_MAIL_OUTBOX=f"{_TMP}/outbox",
     VOLTPHISH_PHISH_BASE_URL="http://testserver",
     VOLTPHISH_COOKIE_SECURE="false",
+    # Tests create profiles that point at no real SMTP; don't force live verify.
+    VOLTPHISH_REQUIRE_PROFILE_VERIFY="false",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

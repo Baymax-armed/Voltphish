@@ -34,39 +34,38 @@ export default function ForceChangePassword() {
   };
 
   return (
-    <div className="login-wrap">
-      <div className="card login-card">
-        <div className="brand">
-          <div className="brand-logo">P</div>
-          <div>
+    <div className="login-wrap ocean">
+      <div className="login-card solo">
+        <div className="login-main">
+          <div className="login-hero">
             <div className="brand-name">Set a new password</div>
-            <div className="brand-tag">{user?.email}</div>
+            <div className="login-tag">{user?.email}</div>
           </div>
-        </div>
-        <div className="banner" style={{ marginBottom: 16 }}>
-          You're signed in with a temporary password. Choose a new one to continue.
-        </div>
-        <form onSubmit={submit}>
-          <div className="field">
-            <label>Current (temporary) password</label>
-            <input type="password" value={cur} autoComplete="current-password" onChange={(e) => setCur(e.target.value)} required />
+          <div className="login-note">
+            You're signed in with a temporary password. Choose a new one to continue.
           </div>
-          <div className="field">
-            <label>New password <span className="hint">(min 12 characters)</span></label>
-            <input type="password" value={next} autoComplete="new-password" minLength={12} onChange={(e) => setNext(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label>Confirm new password</label>
-            <input type="password" value={confirm} autoComplete="new-password" minLength={12} onChange={(e) => setConfirm(e.target.value)} required />
-          </div>
-          {err && <div className="err">{err}</div>}
-          <button className="btn primary" style={{ width: "100%", marginTop: 8 }} disabled={busy}>
-            {busy ? "Saving…" : "Set password & continue"}
+          <form onSubmit={submit}>
+            <div className="field">
+              <label>Current (temporary) password</label>
+              <input type="password" value={cur} autoComplete="current-password" onChange={(e) => setCur(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label>New password <span className="hint">(min 12 characters)</span></label>
+              <input type="password" value={next} autoComplete="new-password" minLength={12} onChange={(e) => setNext(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label>Confirm new password</label>
+              <input type="password" value={confirm} autoComplete="new-password" minLength={12} onChange={(e) => setConfirm(e.target.value)} required />
+            </div>
+            {err && <div className="login-err">{err}</div>}
+            <button className="login-btn" disabled={busy}>
+              {busy ? "Saving…" : "Set password & continue"}
+            </button>
+          </form>
+          <button type="button" className="login-btn sso-btn" style={{ marginTop: 10 }} onClick={() => logout()}>
+            Sign out
           </button>
-        </form>
-        <button className="btn sm" style={{ width: "100%", marginTop: 10 }} onClick={() => logout()}>
-          Sign out
-        </button>
+        </div>
       </div>
     </div>
   );

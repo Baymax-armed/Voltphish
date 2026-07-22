@@ -18,9 +18,9 @@ security-awareness tool — contributions should keep it that way.
 # Backend (auto-creates an admin, prints the password)
 cd backend
 python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m uvicorn app.main:app --port 8080 --reload
+.venv/Scripts/python -m uvicorn app.main:app --port 8010 --reload
 
-# Frontend (hot reload, proxies /api → :8080)
+# Frontend (hot reload, proxies /api → :8010)
 cd frontend && npm install && npm run dev
 ```
 

@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     admin_host: str = "127.0.0.1"
     admin_port: int = 8080
-    phish_base_url: str = "http://127.0.0.1:8080"
+    phish_base_url: str = "http://127.0.0.1:8010"
 
     # Optional Cloudflare Tunnel sidecar. When set (e.g. http://cloudflared:20241),
     # the app reads the tunnel's live public URL from cloudflared's metrics
@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     tunnel_metrics_url: str = ""
 
     cookie_secure: bool = False
+
+    # Force a live SMTP/API connectivity + auth check before a Sending Profile
+    # can be saved, so a broken profile can't be persisted. On by default; set
+    # false to allow saving unverified profiles (e.g. offline drafts, or tests).
+    require_profile_verify: bool = True
 
     mail_backend: MailBackend = MailBackend.console
     mail_outbox: str = "./outbox"

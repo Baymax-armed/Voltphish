@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
+from ..config import get_settings
 from ..database import get_db
 from ..csrf import csrf_protect
 from ..dependencies import get_current_user
@@ -70,7 +71,7 @@ def list_profiles(db: DbSession = Depends(get_db)) -> list[ProfileOut]:
 
 
 @router.post("", response_model=ProfileOut, status_code=status.HTTP_201_CREATED)
-def create_profile(payload: ProfileCreate, db: DbSession = Depends(get_db)) -> ProfileOut:
+async def create_profile(payload: ProfileCreate, db: DbSession = Depends(get_db)) -> ProfileOut:
     p = SendingProfile(
         name=payload.name,
         from_address=str(payload.from_address),
@@ -88,6 +89,9 @@ def create_profile(payload: ProfileCreate, db: DbSession = Depends(get_db)) -> P
         api_domain=payload.api_domain,
         api_key_encrypted=encrypt_secret(payload.api_key),
     )
+    # A profile can't be saved unless it actually connects/authenticates.
+    if get_settings().require_profile_verify:
+        await _verify_or_400(p)
     db.add(p)
     try:
         db.commit()
@@ -99,7 +103,7 @@ def create_profile(payload: ProfileCreate, db: DbSession = Depends(get_db)) -> P
 
 
 @router.put("/{profile_id}", response_model=ProfileOut)
-def update_profile(
+async def update_profile(
     profile_id: int, payload: ProfileUpdate, db: DbSession = Depends(get_db)
 ) -> ProfileOut:
     p = db.get(SendingProfile, profile_id)
@@ -123,6 +127,9 @@ def update_profile(
         p.password_encrypted = encrypt_secret(payload.password) if payload.password else None
     if payload.api_key is not None:
         p.api_key_encrypted = encrypt_secret(payload.api_key) if payload.api_key else None
+    # Re-verify the (updated) profile before persisting the changes.
+    if get_settings().require_profile_verify:
+        await _verify_or_400(p)
     try:
         db.commit()
     except IntegrityError:
@@ -130,6 +137,24 @@ def update_profile(
         raise HTTPException(status.HTTP_409_CONFLICT, "A profile with that name already exists")
     db.refresh(p)
     return _to_out(p)
+
+
+async def _verify_or_400(p: SendingProfile) -> None:
+    """Force a live connectivity/credential check; raise 400 (blocking the save)
+    if it fails, so a broken Sending Profile can never be persisted."""
+    if p.kind == "api":
+        try:
+            await verify_api(p)
+        except EmailApiError as exc:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Can't save — API check failed: {exc}")
+        return
+    try:
+        await verify_smtp(p)
+    except SmtpVerifyError as exc:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Can't save — SMTP connection failed: {exc} Hint: {_tls_hint(p)}",
+        )
 
 
 def _tls_hint(p: SendingProfile) -> str:

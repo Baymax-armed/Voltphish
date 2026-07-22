@@ -5,7 +5,9 @@ services:
     build: .
     image: voltphish:latest
     ports:
-      - "8080:8080"
+      # Host 8010 → container 8080. VoltPhish is on 8010 so 8080 stays free for
+      # your pentest tooling (Burp, etc.). Open http://localhost:8010.
+      - "8010:8080"
     environment:
       # ── First-run admin ──────────────────────────────────────
       # RECOMMENDED: set a stable password below so you always know it and
@@ -24,7 +26,7 @@ services:
       # The public base URL recipients' tracking links resolve to.
       # For local testing this is fine; in a real test set it to the
       # authorized host recipients can reach.
-      VOLTPHISH_PHISH_BASE_URL: "http://localhost:8080"
+      VOLTPHISH_PHISH_BASE_URL: "http://localhost:8010"
 
       # ── Public link via Cloudflare Tunnel (optional) ─────────
       # When the `cloudflared` sidecar below is running, the app reads its live

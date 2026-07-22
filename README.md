@@ -34,13 +34,17 @@ Most open-source phishing tools stop at **"who clicked."** VoltPhish runs the wh
 
 It's built for the people who *run* awareness programs, not just red teams: multi-vector lures, a one-click Report-Phish button for employees, a built-in training LMS that auto-enrolls anyone who fails, human-risk analytics, SSO, and 2FA — the things that usually mean paying for an enterprise (paid) platform.
 
-## 🚀 Quickstart — one command
+## 📦 Installation
+
+VoltPhish runs on **port 8010** (8080 is intentionally left free for your pentest tooling — Burp, etc.).
+
+### Option A — Docker (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-1. Open **http://localhost:8080**
+1. Open **http://localhost:8010**
 2. Grab the first-run admin password from the logs:
    ```bash
    docker compose logs voltphish | grep -A3 "first-run"
@@ -49,6 +53,20 @@ docker compose up --build
 3. Sign in, set a new password, and go. With the default **console** mail backend, launching a campaign writes each email as a `.eml` file to the data volume instead of sending — so you can walk the whole open → click → submit → teach flow with **zero real email**. Switch `VOLTPHISH_MAIL_BACKEND=smtp` and add a Sending Profile to deliver for real (against hosts you're authorized to test).
 
 Data (SQLite + outbox) persists in the `voltphish-data` volume. Use `docker compose up -d` to keep it — **not** `down -v`, which wipes the volume.
+
+### Option B — Run from source (no Docker)
+
+```bash
+# Backend (auto-creates an admin, prints the password) — served on :8010
+cd backend
+python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python -m uvicorn app.main:app --port 8010 --reload
+
+# Frontend (hot reload, proxies /api → :8010)
+cd frontend && npm install && npm run dev
+```
+
+Then open the Vite dev server it prints (usually **http://localhost:5173**). Interactive API docs (dev only): `http://localhost:8010/api/docs`.
 
 ## 📸 A look inside
 
@@ -128,19 +146,6 @@ An honest picture against typical open-source tools (most are unmaintained) and 
 | Security | argon2id hashing, AES-256-GCM column encryption, TOTP 2FA, OIDC SSO, CSRF, SSRF guard, rate-limit + lockout, CSP/HSTS headers |
 | Deploy | Multi-stage Docker (node build → python runtime), SQLite volume |
 
-## 🛠️ Local dev (without Docker)
-
-```bash
-# Backend (auto-creates an admin, prints the password)
-cd backend
-python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m uvicorn app.main:app --port 8080 --reload
-
-# Frontend (hot reload, proxies /api → :8080)
-cd frontend && npm install && npm run dev
-```
-
-Interactive API docs (dev only): `http://localhost:8080/api/docs`
 
 ## 🔐 Responsible use
 

@@ -42,7 +42,7 @@ Email + QR (quishing) + calendar lures · AI-assisted lure generation · report-
 |---|---|
 | `VOLTPHISH_SECRET_KEY` | **Required in production.** 48+ random chars; app refuses to start without it. |
 | `VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD` | Set your own first-run admin password (else one is generated and logged). |
-| `VOLTPHISH_MAIL_BACKEND` | `console` (default, writes `.eml` files — no real email) or `smtp`. |
+| `VOLTPHISH_MAIL_BACKEND` | `smtp` (default — sends real email via the profile) or `console` (dry-run: writes `.eml` files, no real email). |
 | `VOLTPHISH_COOKIE_SECURE` | Set `true` when serving over HTTPS. |
 
 Data (SQLite + outbox) persists in the volume mounted at `/data`.

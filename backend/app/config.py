@@ -58,7 +58,14 @@ class Settings(BaseSettings):
     # false to allow saving unverified profiles (e.g. offline drafts, or tests).
     require_profile_verify: bool = True
 
-    mail_backend: MailBackend = MailBackend.console
+    # SECURITY: real SMTP delivery is the DEFAULT (explicit product decision) —
+    # a launched campaign sends real email via its sending profile. The 'console'
+    # dry-run (writes .eml files instead of sending) is no longer a default or a
+    # user-facing "test mode"; it only applies when VOLTPHISH_MAIL_BACKEND=console
+    # is set explicitly (the automated test suite does this). Dropping the safe
+    # console default means a misconfigured or unauthorized campaign can send real
+    # email — only ever run campaigns against recipients you are authorized to test.
+    mail_backend: MailBackend = MailBackend.smtp
     mail_outbox: str = "./outbox"
 
     # Ethical guardrail (see README "Responsible use"). Default: do NOT store

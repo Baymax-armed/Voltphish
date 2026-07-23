@@ -55,7 +55,7 @@ VoltPhish is built specifically for self-hosting: one Docker command, a SQLite d
 GoPhish is a well-known open-source toolkit focused on **email phishing and click tracking**. VoltPhish covers that same ground and adds the rest of an awareness program: QR and calendar lures, AI-assisted content, a native report-phish button for Outlook and Gmail, a built-in training LMS that auto-enrolls anyone who fails, human-risk scoring, a geo map, SSO, 2FA, and RBAC. If you only need to send test emails, GoPhish is fine; if you want to run and measure a full program, VoltPhish does more out of the box.
 
 ### Can I run a phishing simulation for my own company for free?
-Yes, as long as you're authorized to test the recipients (your own organization, or a client engagement with signed scope). VoltPhish is free and self-hosted. With its default console mail mode you can walk the entire open → click → submit → train flow with no real email at all, then switch to SMTP when you're ready to send for real.
+Yes, as long as you're authorized to test the recipients (your own organization, or a client engagement with signed scope). VoltPhish is free and self-hosted. It sends real email by default via your SMTP profile; an optional dry-run mode (`VOLTPHISH_MAIL_BACKEND=console`) lets you walk the entire open → click → submit → train flow with no real email at all before you go live.
 
 ### Does VoltPhish store the passwords people type into the fake login pages?
 No. This is deliberate. The landing endpoint reads the submitted form and discards the password; by default no submitted field values are stored at all — only *that* a submission happened, for your metrics. VoltPhish is a simulation tool and is built so it can't quietly become a credential-harvesting kit.

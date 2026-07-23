@@ -40,7 +40,7 @@ It's a single app — a clean React admin, a FastAPI backend, and the tracking s
 - **Catch** the employees who spot it and report it — and give them credit.
 - **Measure** who's actually at risk, department by department, over time.
 
-Spin it up with one command, and with the default settings it writes each "sent" email to a file instead of mailing it — so you can walk the entire open → click → submit → train flow with **zero real email** before you ever touch a live inbox.
+Spin it up with one command. Add your SMTP details and it sends for real; flip on the optional dry-run (`VOLTPHISH_MAIL_BACKEND=console`) and it writes each "sent" email to a file instead of mailing — so you can rehearse the entire open → click → submit → train flow with **zero real email** before you ever touch a live inbox.
 
 ## 📸 A look inside
 
@@ -99,7 +99,7 @@ docker compose up --build
    docker compose logs voltphish | grep -A3 "first-run"
    ```
    (Prefer to pick your own? Set `VOLTPHISH_BOOTSTRAP_ADMIN_PASSWORD` in `docker-compose.yml`.)
-3. Sign in, choose a new password, and you're in. With the default **console** mail backend, launching a campaign writes each email as a `.eml` file to the data volume instead of sending it — so you get the full open → click → submit → teach flow with **no real email at all**. When you're ready to send for real (against hosts you're authorized to test), set `VOLTPHISH_MAIL_BACKEND=smtp` and add a Sending Profile.
+3. Sign in, choose a new password, and you're in. Add a Sending Profile with your SMTP details and launch — VoltPhish delivers **real email** by default (only ever to recipients you're authorized to test). Want to rehearse first with **no real email**? Set `VOLTPHISH_MAIL_BACKEND=console` and every "sent" message is written as a `.eml` file to the data volume instead — walk the full open → click → submit → teach flow safely, then remove the flag to go live.
 
 Your data (SQLite + outbox) lives in the `voltphish-data` volume. Use `docker compose up -d` to keep it running — just avoid `down -v`, which wipes the volume.
 
@@ -215,7 +215,7 @@ VoltPhish is built for self-hosting: one Docker command, a local data volume, an
 GoPhish focuses on email phishing and click tracking. VoltPhish does that too, and adds QR and calendar lures, AI-assisted content, a native Outlook/Gmail report button, a built-in training LMS with auto-enrollment, human-risk scoring, a geo map, SSO, 2FA, and RBAC.
 
 **Can I run a phishing simulation for my company for free?**
-Yes, as long as you're authorized to test the recipients. VoltPhish is free, and its default console mail mode lets you rehearse the full open → click → submit → train flow with no real email.
+Yes, as long as you're authorized to test the recipients. VoltPhish is free, and an optional dry-run mode (`VOLTPHISH_MAIL_BACKEND=console`) lets you rehearse the full open → click → submit → train flow with no real email before going live.
 
 **Does it store the passwords people type into the fake login pages?**
 No. The password is read and discarded; by default only *that* a submission happened is recorded, never the value. It's a simulation tool, built so it can't become a credential-harvesting kit.

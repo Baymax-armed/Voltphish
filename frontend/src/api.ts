@@ -21,6 +21,7 @@ import type {
   EventItem,
   Group,
   GroupSummary,
+  Target,
   LandingPage,
   PageSummary,
   Profile,
@@ -174,6 +175,20 @@ export const api = {
   updateGroup: (id: number, g: { name: string; targets: unknown[] }) =>
     request<Group>("PUT", `/groups/${id}`, g),
   deleteGroup: (id: number) => request<{ detail: string }>("DELETE", `/groups/${id}`),
+  parseXlsx: async (file: File): Promise<Target[]> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const resp = await fetch(`/api/v1/groups/parse-xlsx`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-CSRF-Token": csrfToken },
+      body: fd,
+    });
+    const text = await resp.text();
+    const data = text ? JSON.parse(text) : [];
+    if (!resp.ok) throw new ApiError(resp.status, data?.detail || "Couldn't read that file");
+    return data as Target[];
+  },
 
   // profiles
   listProfiles: () => request<Profile[]>("GET", "/profiles"),

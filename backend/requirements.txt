@@ -30,5 +30,9 @@ psycopg[binary]==3.2.3
 # used when VOLTPHISH_REDIS_URL is set; otherwise the in-memory limiter is used.
 redis==5.2.1
 
+# openpyxl: parse uploaded .xlsx target lists server-side (xlsx is a binary
+# format). Read-only, data-only mode; no macro/formula execution.
+openpyxl==3.1.5
+
 # Dev / test
 pytest==8.3.4

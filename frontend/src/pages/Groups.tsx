@@ -269,11 +269,20 @@ function GroupForm({
       notify("File exceeds 5 MB.", "error");
       return;
     }
+    const isXlsx =
+      /\.xlsx$/i.test(file.name) ||
+      file.type.includes("spreadsheetml") ||
+      file.type.includes("ms-excel");
     try {
-      const text = await file.text();
-      mergeTargets(parseCsv(text), file.name);
-    } catch {
-      notify("Couldn't read that file.", "error");
+      if (isXlsx) {
+        // xlsx is binary — parse it server-side (openpyxl), then merge the rows.
+        mergeTargets(await api.parseXlsx(file), file.name);
+      } else {
+        // csv / tsv / txt — plain text, parsed in the browser.
+        mergeTargets(parseCsv(await file.text()), file.name);
+      }
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : "Couldn't read that file.", "error");
     }
   };
 
@@ -319,12 +328,17 @@ function GroupForm({
         <div className="field">
           <label>
             Import targets{" "}
-            <span className="hint">upload a CSV, or paste rows below</span>
+            <span className="hint">upload a CSV, XLSX or TXT file, or paste rows below</span>
           </label>
           <div className="btn-row" style={{ marginBottom: 10 }}>
             <label className="btn sm" style={{ cursor: "pointer" }}>
-              📄 Upload CSV
-              <input type="file" accept=".csv,text/csv,.tsv,text/plain" onChange={onFile} style={{ display: "none" }} />
+              📄 Upload CSV / XLSX / TXT
+              <input
+                type="file"
+                accept=".csv,text/csv,.tsv,.txt,text/plain,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={onFile}
+                style={{ display: "none" }}
+              />
             </label>
             <button type="button" className="btn sm" onClick={downloadTemplate}>
               ⭳ Download template

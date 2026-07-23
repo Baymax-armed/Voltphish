@@ -80,11 +80,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}/voltphish
-          short-description: "Free, open-source, self-hosted phishing simulation & security-awareness platform."
-          readme-filepath: ./docs/DOCKERHUB.md
+      # NOTE: the Docker Hub description/overview is set manually on the Hub page.
+      # The old auto-sync step (peter-evans/dockerhub-description) was removed
+      # because that API endpoint rejects Personal Access Token auth (403
+      # Forbidden) and only accepts the account password, which we don't want to
+      # store in CI. The Overview text lives in docs/DOCKERHUB.md — paste it once
+      # at https://hub.docker.com/r/<namespace>/voltphish → Edit.

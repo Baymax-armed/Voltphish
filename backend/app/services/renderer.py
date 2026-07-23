@@ -46,13 +46,13 @@ def _pixel_tag(url: str) -> str:
 
 
 def _qr_tag(url: str) -> str:
-    # A visible, scannable QR that opens the recipient's click link. Sized for
-    # comfortable phone-camera scanning in an email body.
-    return (
-        f'<img src="{escape(url, quote=True)}" alt="Scan the QR code to continue" '
-        'width="180" height="180" border="0" '
-        'style="width:180px;height:180px;border:0" />'
-    )
+    # A visible, scannable QR built from HTML table cells rather than an <img>,
+    # so it still renders when the mail client blocks images from an unverified
+    # sender (Outlook does this by default). Encodes the tracked click link, so a
+    # phone-camera scan opens the landing page exactly like a real quishing lure.
+    from .qr import qr_html_table
+
+    return qr_html_table(url)
 
 
 def _substitute(body: str, ctx: RenderContext, *, is_html: bool) -> str:
@@ -70,8 +70,10 @@ def _substitute(body: str, ctx: RenderContext, *, is_html: bool) -> str:
         "{{.URL}}": click,           # our own URL; safe to inline
         "{{.TrackingURL}}": pixel,
         "{{.Tracker}}": _pixel_tag(pixel) if is_html else "",
-        "{{.QRURL}}": qr,            # our own URL; safe to inline
-        "{{.QR}}": _qr_tag(qr) if is_html else qr,
+        "{{.QRURL}}": qr,            # PNG-serving endpoint, for custom <img> markup
+        # Ready-made QR: a table encoding the click link (image-blocking-proof).
+        # Scanning it opens the tracked landing page. Text emails get the URL.
+        "{{.QR}}": _qr_tag(click) if is_html else click,
         "{{.AttachURL}}": tracker.attach_pixel_url(ctx.phish_url, ctx.rid),
         # Always a real <img> pixel so it fires from inside an HTML attachment.
         "{{.AttachTracker}}": _pixel_tag(tracker.attach_pixel_url(ctx.phish_url, ctx.rid)),

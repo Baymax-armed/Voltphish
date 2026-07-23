@@ -246,23 +246,19 @@ async def landing_post(rid: str, request: Request, db: DbSession = Depends(get_d
     result, campaign = _lookup(db, rid)
     if result and campaign:
         # By default store nothing about the submitted values; only that a
-        # submission happened (ethical guardrail). When capture is opted in, we
-        # record the VALUES of ordinary fields (username, email, name, …) so the
-        # operator can see what the recipient entered — a captured-data view.
+        # submission happened (ethical guardrail — the safe default is OFF).
         details: dict | None = None
         if settings.capture_passwords:
-            # SECURITY: password-type and other credential/secret fields are
-            # ALWAYS dropped and NEVER stored — only ordinary fields are kept,
-            # length-capped. The password guardrail holds regardless of this flag.
-            _SECRET_FIELDS = {
-                "password", "passwd", "pwd", "pass", "otp", "code", "pin", "mfa",
-                "token", "secret", "cvv", "cvc", "card", "cardnumber", "ssn",
-            }
+            # SECURITY: FULL CAPTURE is on — the operator explicitly opted in
+            # (VOLTPHISH_CAPTURE_PASSWORDS=true) to store EVERY submitted field,
+            # INCLUDING passwords and other credentials. This creates a store of
+            # real secrets: only run it in an AUTHORIZED engagement, restrict and
+            # encrypt access, and purge it when done. Values are length-capped.
             form = await request.form()
             details = {
-                k: str(v)[:200]
+                k: str(v)[:500]
                 for k, v in form.items()
-                if k.lower() not in _SECRET_FIELDS and not hasattr(v, "filename")
+                if not hasattr(v, "filename")  # skip file uploads
             } or None
         record_event(
             db,

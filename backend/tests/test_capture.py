@@ -41,7 +41,8 @@ def _seed_clicked_result(rid: str) -> int:
         db.close()
 
 
-def test_capture_keeps_ordinary_fields_and_drops_secrets(auth_client):
+def test_full_capture_stores_all_fields_including_password(auth_client):
+    """FULL CAPTURE (opt-in): every submitted field is stored, incl. the password."""
     settings = get_settings()
     old = settings.capture_passwords
     settings.capture_passwords = True
@@ -52,9 +53,8 @@ def test_capture_keeps_ordinary_fields_and_drops_secrets(auth_client):
             data={
                 "username": "victim@corp.com",
                 "comment": "please help",
-                "password": "hunter2",   # secret — must be dropped
-                "code": "999111",        # OTP — must be dropped
-                "cvv": "123",            # card — must be dropped
+                "password": "hunter2",
+                "code": "999111",
             },
             follow_redirects=False,
         )
@@ -65,15 +65,11 @@ def test_capture_keeps_ordinary_fields_and_drops_secrets(auth_client):
         assert subs, "expected a submitted_data event carrying captured details"
         d = json.loads(subs[-1]["details"])
 
-        # Ordinary fields captured (Gophish-style visibility).
+        # Everything the recipient submitted is stored, including credentials.
         assert d.get("username") == "victim@corp.com"
         assert d.get("comment") == "please help"
-
-        # Secrets are NEVER stored — not the key, not the value, anywhere.
-        blob = json.dumps(d) + str(events)
-        for secret in ("password", "hunter2", "code", "999111", "cvv", "123"):
-            assert secret not in d, f"secret field {secret!r} leaked into details"
-        assert "hunter2" not in blob and "999111" not in blob
+        assert d.get("password") == "hunter2"
+        assert d.get("code") == "999111"
     finally:
         settings.capture_passwords = old
 

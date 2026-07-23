@@ -34,7 +34,7 @@ If you want an **open-source, self-hosted alternative to commercial security-awa
 | Deliverability check + allowlist generator | ✅ | ❌ | ✅ |
 | Self-hosted (your data stays with you) | ✅ | ✅ | ❌ (vendor-hosted) |
 | Free / no per-seat cost | ✅ | ✅ | ❌ |
-| Passwords typed into fake logins are never stored | ✅ | — | varies |
+| Submitted data not stored by default (full capture opt-in) | ✅ | ~ | varies |
 
 Legend: ✅ yes · ❌ no · ~ partial / varies by vendor.
 
@@ -58,7 +58,7 @@ GoPhish is a well-known open-source toolkit focused on **email phishing and clic
 Yes, as long as you're authorized to test the recipients (your own organization, or a client engagement with signed scope). VoltPhish is free and self-hosted. It sends real email by default via your SMTP profile; an optional dry-run mode (`VOLTPHISH_MAIL_BACKEND=console`) lets you walk the entire open → click → submit → train flow with no real email at all before you go live.
 
 ### Does VoltPhish store the passwords people type into the fake login pages?
-No. This is deliberate. The landing endpoint reads the submitted form and discards the password; by default no submitted field values are stored at all — only *that* a submission happened, for your metrics. VoltPhish is a simulation tool and is built so it can't quietly become a credential-harvesting kit.
+By default, no — only *that* a submission happened is recorded, with no field values stored at all. Full capture (every field, including passwords) is available as an explicit opt-in (`VOLTPHISH_CAPTURE_PASSWORDS=true`) for authorized engagements; it logs a startup warning while enabled, and you are responsible for protecting and purging the captured data.
 
 ### What attack types (vectors) does it support?
 Email phishing with per-recipient personalization and open-tracking, QR-code / "quishing" lures, calendar (.ics) invite lures, attachment lures, and modern landing pages including fake CAPTCHA ("ClickFix") and browser-in-the-browser SSO popups. Emails and landing pages can be drafted with AI (Claude, GPT, or Gemini) using your own API key.

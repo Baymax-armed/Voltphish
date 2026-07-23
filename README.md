@@ -127,7 +127,7 @@ Nothing hidden here — this is the full feature set.
 - **📅 Calendar (.ics) lures** — meeting-invite attachments with a tracked "join" link, a vector most tools ignore.
 - **🖱️ ClickFix "verify you're human"** & **🪟 Browser-in-the-Browser** — modern 2025-era landing pages (fake CAPTCHA, spoofed SSO popup).
 - **🤖 AI generation** — describe a scenario and draft a full **email or landing page** with Claude, GPT, or Gemini (bring your own key; provider is configurable in Settings).
-- **🖥️ Landing pages** — a login-clone gallery plus form capture. Any `<form>` is auto-captured — and **passwords are never stored.**
+- **🖥️ Landing pages** — a login-clone gallery plus form capture. Any `<form>` is auto-captured; **nothing is stored by default** (only that a submission happened), with full capture available as an explicit opt-in for authorized engagements.
 
 ### 📨 Catch the reports — the human firewall
 - **🔘 Report-Phish button** — a native **Outlook add-in** and a **Gmail Apps Script** give employees one-click reporting. Report a simulation and you're credited as a Champion; report a *real* suspicious email and it lands in an admin **triage queue**.
@@ -195,7 +195,7 @@ An honest picture against typical open-source tools (most unmaintained) and paid
 
 VoltPhish is a *simulation* tool, and it's built on purpose so it can't quietly turn into a credential-harvesting kit:
 
-- **Submitted passwords are never persisted.** The landing endpoint reads the form and throws the password away. By default no submitted field values are stored at all — only *that* a submission happened, for your metrics.
+- **Nothing submitted is stored by default.** Out of the box the landing endpoint records only *that* a submission happened — no field values, not even usernames. Full capture (every field, **including passwords**) is an explicit opt-in (`VOLTPHISH_CAPTURE_PASSWORDS=true`) for authorized engagements; it logs a startup warning while on, and protecting and purging the captured credentials is your responsibility.
 - Secrets (SMTP, API keys, IMAP, SSO client secret, TOTP) are **encrypted at rest** (AES-256-GCM) and never returned by the API.
 - Every campaign action is written to an **append-only audit log**.
 - Tracking links use unguessable per-recipient tokens; an invalid token returns a harmless response and records nothing.
@@ -218,7 +218,7 @@ GoPhish focuses on email phishing and click tracking. VoltPhish does that too, a
 Yes, as long as you're authorized to test the recipients. VoltPhish is free, and an optional dry-run mode (`VOLTPHISH_MAIL_BACKEND=console`) lets you rehearse the full open → click → submit → train flow with no real email before going live.
 
 **Does it store the passwords people type into the fake login pages?**
-No. The password is read and discarded; by default only *that* a submission happened is recorded, never the value. It's a simulation tool, built so it can't become a credential-harvesting kit.
+By default, no — only *that* a submission happened is recorded, never the values. Full capture (every field, including passwords) is available as an explicit opt-in (`VOLTPHISH_CAPTURE_PASSWORDS=true`) for authorized engagements; enable it only with authorization, and purge the captured data when you're done.
 
 📖 More detail, and a full **[VoltPhish vs GoPhish vs commercial platforms comparison](docs/comparison.md)**.
 

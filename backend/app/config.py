@@ -68,12 +68,13 @@ class Settings(BaseSettings):
     mail_backend: MailBackend = MailBackend.smtp
     mail_outbox: str = "./outbox"
 
-    # Ethical guardrail (see README "Responsible use"). Passwords are NEVER
-    # stored regardless of this flag. Default OFF: only THAT a submission
-    # happened is recorded. When ON, the VALUES of ordinary (non-secret) fields
-    # a recipient submits — username, email, name, etc. — are captured and shown
-    # in the campaign timeline (a Gophish-style captured-data view); password,
-    # OTP, card and similar secret fields are always dropped.
+    # SECURITY / ethical guardrail (see README "Responsible use"). Default OFF:
+    # only THAT a submission happened is recorded — no field values, not even
+    # usernames. When set to true it is FULL CAPTURE: every submitted field,
+    # INCLUDING passwords and other credentials, is stored and shown in the
+    # campaign timeline (like Gophish). This creates a real-credential store —
+    # only enable it for an AUTHORIZED engagement, lock down access, and purge it
+    # when finished. The app logs a warning at startup while this is on.
     capture_passwords: bool = False
 
     bootstrap_admin_email: str = "admin@example.com"

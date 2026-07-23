@@ -62,6 +62,12 @@ async def lifespan(_app: FastAPI):
     start_workers()
     start_scheduler()
     log.info("VoltPhish started (env=%s, mail_backend=%s)", settings.env.value, settings.mail_backend.value)
+    if settings.capture_passwords:
+        # SECURITY: make it loud that real credentials are being stored.
+        log.warning(
+            "FULL CAPTURE is ON: every submitted field, INCLUDING PASSWORDS, is "
+            "stored. Use only for an authorized engagement — lock down and purge."
+        )
     yield
     stop_scheduler()
     stop_workers()

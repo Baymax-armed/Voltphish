@@ -14,7 +14,7 @@ It is not a tool for compromising third parties. The trust model assumes:
 |---|---|
 | Admin API (`/api/v1/*`) | Authenticated + role-gated. Never trust client-supplied IDs over the session. |
 | Public tracking server (`/t`,`/c`,`/p`,`/r`) | Unauthenticated by design. Hit by arbitrary internet clients. Must be safe against invalid/forged `rid`s and must never leak whether an `rid` is valid. |
-| Database | Holds recipient PII and encrypted SMTP secrets. Passwords (user + submitted) are never stored in plaintext. |
+| Database | Holds recipient PII and encrypted SMTP secrets. Admin passwords are hashed (argon2id). Submitted form values are not stored by default; full capture (incl. passwords) is an explicit opt-in for authorized engagements. |
 | SMTP egress | Outbound only, TLS-verified by default. |
 
 ## STRIDE (abbreviated)
@@ -25,7 +25,8 @@ It is not a tool for compromising third parties. The trust model assumes:
 - **Tampering:** audit events are append-only; all writes go through Pydantic
   validation and parameterized ORM queries.
 - **Repudiation:** every campaign action is logged with actor/IP/timestamp.
-- **Information disclosure:** submitted passwords are discarded; SMTP passwords
+- **Information disclosure:** submitted form values are not stored by default
+  (full capture is an explicit, warned opt-in); SMTP passwords
   are AES-256-GCM encrypted at rest and never returned; errors are generic to
   clients with detail only in server logs.
 - **DoS:** login rate limiting; bounded SMTP concurrency; per-call timeouts.
@@ -40,7 +41,7 @@ It is not a tool for compromising third parties. The trust model assumes:
 | A01 Access control — default-deny, server-side authz | `dependencies.py`, router `dependencies=[Depends(...)]` |
 | A02 Crypto — argon2id, AES-256-GCM, CSPRNG tokens | `security.py` |
 | A03 Injection — ORM only, safe token substitution (no SSTI), header-injection strip, landing-page PII HTML-escaped | `renderer.py`, all routers |
-| Ethical guardrail — landing-page forms repointed to our tracker; submitted passwords discarded, never stored | `renderer.py`, `phish/server.py` |
+| Ethical guardrail — landing-page forms repointed to our tracker; submitted values not stored by default, full capture an explicit opt-in | `renderer.py`, `phish/server.py`, `config.py` |
 | A04 Insecure design — login lockout/backoff | `services/ratelimit.py`, `routers/auth.py` |
 | A05 Misconfig — security headers, prod fail-closed, docs off in prod | `middleware.py`, `config.py` |
 | A07 Auth failures — session rotation, server-side invalidation, no enumeration | `routers/auth.py` |

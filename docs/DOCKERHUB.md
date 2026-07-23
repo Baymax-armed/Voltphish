@@ -34,7 +34,7 @@ Images are published for **linux/amd64** and **linux/arm64** (works on Intel/AMD
 
 ## What's inside
 
-Email + QR (quishing) + calendar lures · AI-assisted lure generation · report-phish button (Outlook/Gmail) · training LMS with adaptive auto-enroll · human-risk scoring · geo map · SSO (OIDC) · admin 2FA · RBAC · deliverability toolkit · signed webhooks + REST API. Secure by default (argon2id, AES-256-GCM, CSRF/SSRF protection, security headers). Submitted passwords are never stored.
+Email + QR (quishing) + calendar lures · AI-assisted lure generation · report-phish button (Outlook/Gmail) · training LMS with adaptive auto-enroll · human-risk scoring · geo map · SSO (OIDC) · admin 2FA · RBAC · deliverability toolkit · signed webhooks + REST API. Secure by default (argon2id, AES-256-GCM, CSRF/SSRF protection, security headers). Submitted form values aren't stored by default — full capture (incl. passwords) is an explicit opt-in for authorized engagements.
 
 ## Configuration (common env vars)
 

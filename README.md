@@ -13,6 +13,8 @@
     <img alt="Frontend" src="https://img.shields.io/badge/frontend-React%2018%20%2B%20TS-61dafb" />
     <img alt="Deploy" src="https://img.shields.io/badge/deploy-Docker%20(1%20command)-2496ed" />
     <img alt="Vectors" src="https://img.shields.io/badge/vectors-email%20%C2%B7%20QR%20%C2%B7%20calendar%20%C2%B7%20attachment-6f42c1" />
+    <a href="https://hub.docker.com/r/baymaxarmed/voltphish"><img alt="Docker Hub" src="https://img.shields.io/docker/v/baymaxarmed/voltphish?logo=docker&label=Docker%20Hub&color=2496ed" /></a>
+    <a href="https://hub.docker.com/r/baymaxarmed/voltphish"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/baymaxarmed/voltphish?logo=docker&color=2496ed" /></a>
   </p>
 
   <sub>⭐ If VoltPhish saves you time, <a href="https://github.com/Baymax-armed/Voltphish">a star</a> genuinely helps other people find it.</sub>
@@ -75,6 +77,17 @@ All of it in one process, one container, secure by default.
 VoltPhish runs on **port 8010**. Port 8080 is left free on purpose — that's usually where your pentest tooling (Burp and friends) wants to live.
 
 ### Option A — Docker (recommended)
+
+Grab the prebuilt image straight from Docker Hub:
+
+```bash
+docker run -d --name voltphish -p 8010:8080 \
+  -e VOLTPHISH_SECRET_KEY="$(openssl rand -base64 48)" \
+  -v voltphish-data:/data \
+  baymaxarmed/voltphish:latest
+```
+
+…or build and run the full stack (with the optional Cloudflare tunnel) from source:
 
 ```bash
 docker compose up --build

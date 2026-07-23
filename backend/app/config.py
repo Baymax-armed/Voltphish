@@ -68,14 +68,15 @@ class Settings(BaseSettings):
     mail_backend: MailBackend = MailBackend.smtp
     mail_outbox: str = "./outbox"
 
-    # SECURITY / ethical guardrail (see README "Responsible use"). Default OFF:
-    # only THAT a submission happened is recorded — no field values, not even
-    # usernames. When set to true it is FULL CAPTURE: every submitted field,
-    # INCLUDING passwords and other credentials, is stored and shown in the
-    # campaign timeline (like Gophish). This creates a real-credential store —
-    # only enable it for an AUTHORIZED engagement, lock down access, and purge it
-    # when finished. The app logs a warning at startup while this is on.
-    capture_passwords: bool = False
+    # SECURITY: FULL CAPTURE. Every field a recipient submits — INCLUDING
+    # passwords and other credentials — is stored and shown in the campaign
+    # timeline (like Gophish). Default is ON, so a submission's actual values are
+    # always recorded. This builds a real-credential store: run VoltPhish ONLY
+    # against recipients you're authorized to test, lock down and encrypt access
+    # to the data, and purge it when the engagement ends. Set this to false to
+    # record only THAT a submission happened (no field values). The app logs a
+    # loud warning at startup whenever capture is on.
+    capture_passwords: bool = True
 
     bootstrap_admin_email: str = "admin@example.com"
     bootstrap_admin_password: str = ""

@@ -19,6 +19,10 @@ os.environ.update(
     VOLTPHISH_COOKIE_SECURE="false",
     # Tests create profiles that point at no real SMTP; don't force live verify.
     VOLTPHISH_REQUIRE_PROFILE_VERIFY="false",
+    # Full capture ships ON by default; tests that assert the "store nothing"
+    # path (and don't want captured values in fixtures) opt out here. The
+    # capture-specific tests flip it on/off themselves.
+    VOLTPHISH_CAPTURE_PASSWORDS="false",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

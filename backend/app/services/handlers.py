@@ -123,6 +123,37 @@ async def handle_send_email(payload: dict) -> None:
         db.close()
 
 
+def _is_local_url(u: str | None) -> bool:
+    return not u or any(h in u for h in ("127.0.0.1", "localhost", "0.0.0.0"))
+
+
+def _training_base(db, enr, passed: str) -> str:
+    """Best public base URL for a training link the recipient must actually open.
+
+    A localhost address is useless in a real inbox, so prefer, in order, the
+    first non-local candidate: the enrolment's campaign public URL (its
+    Cloudflare/tunnel hostname), the live tunnel, the URL the caller passed, then
+    the configured phish_base_url. Only if nothing public exists do we fall back
+    to whatever we have.
+    """
+    from ..models import Campaign
+    from .tunnel import detect_public_url
+
+    candidates: list[str | None] = []
+    if getattr(enr, "campaign_id", None):
+        camp = db.get(Campaign, enr.campaign_id)
+        if camp and camp.phish_url:
+            candidates.append(camp.phish_url)
+    candidates += [detect_public_url(), passed or None, get_settings().phish_base_url]
+    for c in candidates:
+        if c and not _is_local_url(c):
+            return c.rstrip("/")
+    for c in candidates:
+        if c:
+            return c.rstrip("/")
+    return get_settings().phish_base_url.rstrip("/")
+
+
 def _training_invite_html(title: str, link: str) -> str:
     import html as _html
 
@@ -151,7 +182,7 @@ async def handle_send_training_invite(payload: dict) -> None:
         profile = db.get(SendingProfile, int(payload["profile_id"]))
         if module is None or profile is None:
             return
-        base = str(payload.get("base", "")).rstrip("/")
+        base = _training_base(db, enr, str(payload.get("base", "")))
         link = f"{base}/train/{enr.token}"
         await send_email(
             OutgoingEmail(

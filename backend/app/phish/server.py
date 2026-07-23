@@ -209,8 +209,11 @@ def track_click(rid: str, request: Request, db: DbSession = Depends(get_db)) -> 
     # Otherwise honor an explicit redirect_url, else the built-in page.
     if campaign.page_id is None and campaign.redirect_url:
         return _no_store(RedirectResponse(url=campaign.redirect_url, status_code=302))
-    base = campaign.phish_url or settings.phish_base_url
-    return _no_store(RedirectResponse(url=f"{base.rstrip('/')}/p/{rid}", status_code=302))
+    # Relative redirect on purpose: stay on whatever host the click actually
+    # arrived on (the live tunnel/domain), NOT the campaign's stored phish_url —
+    # that may be a different or now-dead tunnel, which would land the recipient
+    # on an unreachable host even though the click link itself worked.
+    return _no_store(RedirectResponse(url=f"/p/{rid}", status_code=302))
 
 
 @router.get("/p/{rid}", response_class=HTMLResponse)
@@ -265,8 +268,9 @@ async def landing_post(rid: str, request: Request, db: DbSession = Depends(get_d
         auto_enroll_on_fail(db, result=result, campaign_id=campaign.id, trigger="submitted")
     # Redirect to the teaching page (awareness moment). Prefer the landing
     # page's own redirect, then the campaign's, then the built-in training page.
-    base = (campaign.phish_url if campaign else None) or settings.phish_base_url
-    dest = f"{base.rstrip('/')}/learn/{rid}"
+    # Default is relative so the teaching page loads on the same host the submit
+    # arrived on, not the campaign's stored (possibly stale/dead) phish_url.
+    dest = f"/learn/{rid}"
     if campaign:
         page = db.get(LandingPage, campaign.page_id) if campaign.page_id else None
         dest = (page.redirect_url if page and page.redirect_url else None) or (

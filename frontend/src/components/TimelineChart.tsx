@@ -23,9 +23,12 @@ export default function TimelineChart({ data }: { data: TimelinePoint[] }) {
     );
   }
 
-  const W = 820;
-  const H = 240;
-  const pad = { l: 34, r: 14, t: 14, b: 30 };
+  // Wide viewBox on purpose: the svg is width:100%, so the rendered height is
+  // container_width / (W/H). A ~6:1 ratio keeps the chart a sensible dashboard
+  // height (~250px) on a full-width card instead of towering over the page.
+  const W = 1400;
+  const H = 230;
+  const pad = { l: 46, r: 18, t: 16, b: 34 };
   const max = Math.max(1, ...data.flatMap((d) => SERIES.map((s) => d[s.key])));
   const x = (i: number) => pad.l + (i / (data.length - 1)) * (W - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
@@ -56,7 +59,7 @@ export default function TimelineChart({ data }: { data: TimelinePoint[] }) {
           return (
             <g key={t}>
               <line x1={pad.l} x2={W - pad.r} y1={gy} y2={gy} stroke="var(--border)" strokeWidth="1" />
-              <text x={pad.l - 6} y={gy + 4} textAnchor="end" fontSize="10" fill="var(--text-dim)">
+              <text x={pad.l - 8} y={gy + 5} textAnchor="end" fontSize="13" fill="var(--text-dim)">
                 {Math.round(max * (1 - t))}
               </text>
             </g>
@@ -69,7 +72,7 @@ export default function TimelineChart({ data }: { data: TimelinePoint[] }) {
             <path d={areaPath(s.key)} fill={`url(#${uid}-${s.key})`} />
             <path d={linePath(s.key)} fill="none" stroke={s.color} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
             {data.map((d, i) => (
-              <circle key={i} cx={x(i)} cy={y((d as any)[s.key])} r="2.6" fill={s.color}>
+              <circle key={i} cx={x(i)} cy={y((d as any)[s.key])} r="3.2" fill={s.color}>
                 <title>{`${shortDate(d.date)} · ${s.label}: ${(d as any)[s.key]}`}</title>
               </circle>
             ))}
@@ -79,7 +82,7 @@ export default function TimelineChart({ data }: { data: TimelinePoint[] }) {
         {/* x labels */}
         {data.map((d, i) =>
           i % step === 0 || i === data.length - 1 ? (
-            <text key={i} x={x(i)} y={H - 10} textAnchor="middle" fontSize="10.5" fill="var(--text-dim)">
+            <text key={i} x={x(i)} y={H - 11} textAnchor="middle" fontSize="13" fill="var(--text-dim)">
               {shortDate(d.date)}
             </text>
           ) : null,

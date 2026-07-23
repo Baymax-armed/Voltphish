@@ -9,6 +9,34 @@ import { useToast } from "../components/Toast";
 
 const AUTO_REFRESH_MS = 2000; // live updates every 2s
 
+// Render the captured submitted fields (JSON) as key=value chips. Passwords and
+// other secrets are never stored server-side, so they never appear here.
+function capturedData(raw?: string | null) {
+  const dim = { color: "var(--text-dim)" } as const;
+  if (!raw) return <span style={dim}>—</span>;
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(raw);
+  } catch {
+    return <span style={dim}>—</span>;
+  }
+  const entries = Object.entries(obj || {});
+  if (!entries.length) return <span style={dim}>—</span>;
+  return (
+    <span
+      className="mono"
+      style={{ fontSize: 12, display: "inline-flex", flexWrap: "wrap", gap: "3px 14px" }}
+    >
+      {entries.map(([k, v]) => (
+        <span key={k}>
+          <span style={dim}>{k}=</span>
+          <span>{String(v)}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function CampaignDetail() {
   const { id } = useParams();
   const cid = Number(id);
@@ -246,6 +274,7 @@ export default function CampaignDetail() {
                 <tr>
                   <th>Time</th>
                   <th>Event</th>
+                  <th>Captured data</th>
                   <th>Recipient</th>
                   <th>IP</th>
                 </tr>
@@ -260,6 +289,7 @@ export default function CampaignDetail() {
                       <td>
                         <Badge status={eventBadge(e.type)} />
                       </td>
+                      <td>{capturedData(e.details)}</td>
                       <td className="mono">{ridEmail(c, e.rid)}</td>
                       <td className="mono">{e.ip || "—"}</td>
                     </tr>

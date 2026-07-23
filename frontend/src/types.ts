@@ -527,5 +527,6 @@ export interface EventItem {
   rid: string | null;
   type: string;
   ip: string | null;
+  details?: string | null;
   created_at: string;
 }

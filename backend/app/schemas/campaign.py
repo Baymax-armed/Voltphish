@@ -125,5 +125,6 @@ class EventOut(BaseModel):
     rid: str | None
     type: str
     ip: str | None
+    details: str | None = None  # JSON of captured non-secret submitted fields
     created_at: datetime
     model_config = {"from_attributes": True}

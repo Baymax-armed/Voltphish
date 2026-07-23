@@ -245,16 +245,25 @@ def landing_get(rid: str, request: Request, db: DbSession = Depends(get_db)) -> 
 async def landing_post(rid: str, request: Request, db: DbSession = Depends(get_db)) -> Response:
     result, campaign = _lookup(db, rid)
     if result and campaign:
-        # Read the form but DISCARD the password. By default store nothing about
-        # the values; only that a submission happened (ethical guardrail).
+        # By default store nothing about the submitted values; only that a
+        # submission happened (ethical guardrail). When capture is opted in, we
+        # record the VALUES of ordinary fields (username, email, name, …) so the
+        # operator can see what the recipient entered — a captured-data view.
         details: dict | None = None
         if settings.capture_passwords:
-            # SECURITY: capturing submitted values is opt-in and password is
-            # STILL never stored. Only non-secret fields are recorded, masked.
+            # SECURITY: password-type and other credential/secret fields are
+            # ALWAYS dropped and NEVER stored — only ordinary fields are kept,
+            # length-capped. The password guardrail holds regardless of this flag.
+            _SECRET_FIELDS = {
+                "password", "passwd", "pwd", "pass", "otp", "code", "pin", "mfa",
+                "token", "secret", "cvv", "cvc", "card", "cardnumber", "ssn",
+            }
             form = await request.form()
             details = {
-                k: "***" for k in form.keys() if k.lower() not in {"password", "passwd", "pwd"}
-            }
+                k: str(v)[:200]
+                for k, v in form.items()
+                if k.lower() not in _SECRET_FIELDS and not hasattr(v, "filename")
+            } or None
         record_event(
             db,
             campaign_id=campaign.id,

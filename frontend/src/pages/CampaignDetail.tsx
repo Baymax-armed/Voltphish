@@ -52,19 +52,24 @@ export default function CampaignDetail() {
     return () => window.clearInterval(id);
   }, []);
 
-  // A campaign only produces new events while it's live; once it's completed
-  // (or a draft/errored), polling would just hammer the server for nothing.
-  const isLive = c?.status === "in_progress" || c?.status === "scheduled";
+  // Keep auto-refreshing after the send completes too: opens, clicks, submits
+  // and reports keep arriving for a while afterwards, so the results should
+  // update on their own without a manual Refresh. Only a draft (nothing sent
+  // yet) or an errored campaign skips polling.
+  const isLive =
+    c?.status === "in_progress" || c?.status === "scheduled" || c?.status === "completed";
+  // Poll fast while actively sending; gentler once completed (engagement only).
+  const pollMs = c?.status === "completed" ? 6000 : AUTO_REFRESH_MS;
 
   // Live auto-refresh (toggleable). Keeps pulling so late opens/clicks show up,
   // and stops on its own when the campaign reaches a terminal state.
   useEffect(() => {
     if (timer.current) window.clearInterval(timer.current);
-    if (auto && isLive) timer.current = window.setInterval(() => load(), AUTO_REFRESH_MS);
+    if (auto && isLive) timer.current = window.setInterval(() => load(), pollMs);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [auto, isLive, load]);
+  }, [auto, isLive, pollMs, load]);
 
   const doLaunch = async (authorization_ref: string) => {
     setBusy(true);

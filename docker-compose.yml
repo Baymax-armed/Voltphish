@@ -1,5 +1,5 @@
 # One-command startup:  docker compose up --build
-# Then open http://localhost:8080  (first-run admin password is printed to logs).
+# Then open http://localhost:8010  (first-run admin password is printed to logs).
 services:
   voltphish:
     build: .

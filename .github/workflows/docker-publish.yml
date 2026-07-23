@@ -1,0 +1,81 @@
+name: Publish Docker image
+
+# Builds the VoltPhish image and pushes it to Docker Hub so `docker pull`,
+# `docker search voltphish`, and the Docker Hub website can all find it.
+#
+# One-time setup (repo → Settings → Secrets and variables → Actions):
+#   DOCKERHUB_USERNAME  your Docker Hub username (the image namespace)
+#   DOCKERHUB_TOKEN     a Docker Hub access token (Account → Security → New
+#                       Access Token, "Read & Write"). Never your password.
+#
+# Then publish by pushing a version tag:  git tag v1.0.0 && git push origin v1.0.0
+# (or run this workflow manually from the Actions tab).
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Extra tag to publish (e.g. 1.0.0). 'latest' is always published."
+        required: false
+        default: ""
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for arm64 builds)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Generates tags/labels: :latest, the semver from the git tag, and the
+      # OCI metadata (title/description/source) that Docker Hub displays.
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/voltphish
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
+          labels: |
+            org.opencontainers.image.title=VoltPhish
+            org.opencontainers.image.description=Free, open-source, self-hosted phishing simulation and security-awareness training platform.
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/voltphish
+          short-description: "Free, open-source, self-hosted phishing simulation & security-awareness platform."
+          readme-filepath: ./docs/DOCKERHUB.md

@@ -130,6 +130,12 @@ def _point_forms_at(html: str, action_url: str) -> str:
 def render_landing(body: str, ctx: RenderContext) -> str:
     """Render a landing page: personalize tokens (HTML-escaping recipient PII)
     and repoint forms at the submission endpoint. No tracking pixel is injected
-    (the recipient already clicked to get here)."""
+    (the recipient already clicked to get here).
+
+    The form action is RELATIVE (/p/{rid}) so the submission POSTs back to the
+    exact host the recipient is viewing the page on (the live tunnel/domain), not
+    the campaign's stored phish_url — which may be a stale or now-dead tunnel. An
+    absolute action to a dead host silently drops the submission, so 'submitted'
+    never shows up in the campaign results even though the user filled the form."""
     out = _substitute(body, ctx, is_html=True)
-    return _point_forms_at(out, tracker.landing_url(ctx.phish_url, ctx.rid))
+    return _point_forms_at(out, f"/p/{ctx.rid}")

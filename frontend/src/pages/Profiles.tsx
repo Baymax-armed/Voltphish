@@ -273,7 +273,7 @@ function ProfileForm({
           <label>Delivery type</label>
           <select value={kind} onChange={(e) => setKind(e.target.value as ProfileKind)}>
             <option value="smtp">SMTP server</option>
-            <option value="api">Email API (over HTTPS — use when SMTP ports are blocked)</option>
+            <option value="api">Email API</option>
           </select>
         </div>
         <div className="field">

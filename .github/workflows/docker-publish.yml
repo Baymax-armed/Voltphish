@@ -66,11 +66,14 @@ jobs:
             org.opencontainers.image.description=Free, open-source, self-hosted phishing simulation and security-awareness training platform.
             org.opencontainers.image.licenses=MIT
 
-      - name: Build and push (amd64 + arm64)
+      # amd64 only for now — it's native on the runner (~2-3 min) and covers
+      # nearly all servers/desktops. arm64 via QEMU emulation was taking 40+ min;
+      # it'll be re-added later using a native arm64 runner (fast, no emulation).
+      - name: Build and push (amd64)
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

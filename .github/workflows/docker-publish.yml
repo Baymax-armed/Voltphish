@@ -4,9 +4,15 @@ name: Publish Docker image
 # `docker search voltphish`, and the Docker Hub website can all find it.
 #
 # One-time setup (repo → Settings → Secrets and variables → Actions):
-#   DOCKERHUB_USERNAME  your Docker Hub username (the image namespace)
-#   DOCKERHUB_TOKEN     a Docker Hub access token (Account → Security → New
-#                       Access Token, "Read & Write"). Never your password.
+#   Secrets:
+#     DOCKERHUB_USERNAME  the Docker Hub account you LOG IN as (e.g. nady0506)
+#     DOCKERHUB_TOKEN     a Docker Hub access token (Account → Security → New
+#                         Access Token, "Read & Write"). Never your password.
+#   Variables (optional):
+#     DOCKERHUB_NAMESPACE the namespace the image is PUSHED under — set this to
+#                         a Docker Hub Organization name (e.g. baymax-armed) if
+#                         you want a branded image name. Defaults to the login
+#                         username when unset. You must own/belong to the org.
 #
 # Then publish by pushing a version tag:  git tag v1.0.0 && git push origin v1.0.0
 # (or run this workflow manually from the Actions tab).
@@ -49,7 +55,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/voltphish
+          images: ${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}/voltphish
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -76,6 +82,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/voltphish
+          repository: ${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}/voltphish
           short-description: "Free, open-source, self-hosted phishing simulation & security-awareness platform."
           readme-filepath: ./docs/DOCKERHUB.md

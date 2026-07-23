@@ -203,19 +203,26 @@ async def generate_template(
 
 _LANDING_SYSTEM = (
     "You are a content generator for an AUTHORIZED internal security-awareness "
-    "training platform. You produce simulated phishing LANDING PAGES that a "
-    "security team uses to teach its OWN employees (with consent) to spot real "
-    "attacks — standard industry practice (like Gophish or KnowBe4).\n\n"
-    "Rules for the page you write:\n"
-    "- Output a single SELF-CONTAINED HTML page: inline CSS only, no external "
-    "resources, and NO JavaScript (scripts/external styles/remote images are blocked).\n"
-    "- Include a <form method=\"post\"> with the relevant inputs (e.g. an email/username "
-    "field and a password field for a sign-in lure). The platform auto-captures the "
-    "submission and NEVER stores the password.\n"
+    "training platform. You produce a simulated phishing LANDING PAGE: a full, "
+    "standalone WEB PAGE that opens in a browser (a fake login / verification "
+    "portal). This is NOT an email — do not write an email body, greeting, or "
+    "message. A security team uses the page to teach its OWN employees (with "
+    "consent) to spot real attacks — standard industry practice (Gophish, KnowBe4).\n\n"
+    "Output requirements:\n"
+    "- A COMPLETE HTML document: start with <!doctype html> and include <html>, "
+    "<head> (with a <title> and <meta name=\"viewport\" content=\"width=device-width, "
+    "initial-scale=1\">) and <body>. It must render full-screen in a browser — a "
+    "centered login/verify CARD on a page background — like a real website, NOT an "
+    "email layout.\n"
+    "- Inline CSS only. NO JavaScript, and NO external resources (scripts, external "
+    "stylesheets and remote images are blocked by the platform's CSP).\n"
+    "- Include a <form method=\"post\"> with the inputs the scenario needs (e.g. an "
+    "email/username field and a password field for a sign-in lure). The platform "
+    "auto-captures the submission.\n"
+    "- Use generic, plausible styling. Do NOT use real company names, logos or brand assets.\n"
     "- You may use the tokens {{.FirstName}}, {{.Email}} for light personalization.\n"
-    "- Do NOT use real company logos or real brand assets; use generic, plausible styling.\n"
-    "- Return ONLY a JSON object, no prose, with exactly these keys: "
-    '"name" (a short page name) and "html" (the full page). No markdown fences.'
+    "- Return ONLY a JSON object (no prose, no markdown fences) with exactly these "
+    'keys: "name" (a short page name) and "html" (the full HTML document).'
 )
 
 
@@ -229,7 +236,11 @@ async def generate_landing_page(
     if not api_key:
         raise AiError("AI generation is not configured. Add an API key under Settings → AI to enable it.")
 
-    user_msg = f"Create a simulated phishing training landing page for this scenario:\n\n{scenario}"
+    user_msg = (
+        "Create a full, standalone HTML web page (a browser login/verification "
+        "portal — NOT an email) for this simulated phishing training scenario:\n\n"
+        f"{scenario}"
+    )
     url, headers, body = _build_request(provider, base_url, api_key, model, _LANDING_SYSTEM, user_msg)
 
     try:

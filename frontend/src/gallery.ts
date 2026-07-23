@@ -1,5 +1,9 @@
 // Ready-made simulation content. All use {{.FirstName}} / {{.URL}} tokens.
-// Styling is generic (no real logos) — appropriate for awareness training.
+// Brands are deliberately FICTIONAL/GENERIC (no real names, logos or domains):
+// real-brand login clones get flagged by hosting/tunnel providers' anti-phishing
+// systems and taken down (e.g. Cloudflare blackholes the tunnel). Generic
+// company-style lures avoid that, dodge trademark issues, and are still realistic
+// for awareness training.
 
 export interface GalleryTemplate {
   name: string;
@@ -38,28 +42,28 @@ export const GALLERY_TEMPLATES: GalleryTemplate[] = [
       <p>— IT Service Desk</p>`),
   },
   {
-    name: "Microsoft 365 — Unusual sign-in",
-    category: "Microsoft 365",
-    subject: "Unusual sign-in activity on your Microsoft account",
+    name: "Cloud account — Unusual sign-in",
+    category: "Cloud Account",
+    subject: "Unusual sign-in activity on your corporate account",
     text: "Hi {{.FirstName}}, we detected an unusual sign-in. Review activity: {{.URL}}",
     html: wrap(`
-      <p style="font-size:20px;font-weight:600;color:#0067b8">Microsoft account</p>
+      <p style="font-size:20px;font-weight:600;color:#0067b8">Corporate account</p>
       <p>Hi {{.FirstName}},</p>
-      <p>We detected an <strong>unusual sign-in</strong> to your Microsoft 365 account from a new device. If this wasn't you, secure your account immediately.</p>
+      <p>We detected an <strong>unusual sign-in</strong> to your corporate cloud account from a new device. If this wasn't you, secure your account immediately.</p>
       <table style="margin:14px 0;font-size:14px;color:#444"><tr><td>Location</td><td style="padding-left:20px">Kyiv, Ukraine</td></tr><tr><td>Device</td><td style="padding-left:20px">Windows · Chrome</td></tr></table>
       <p style="margin:26px 0">${btn("Review activity")}</p>
-      <p style="color:#666;font-size:13px">The Microsoft account team</p>`),
+      <p style="color:#666;font-size:13px">The Account Security team</p>`),
   },
   {
-    name: "Google — Security alert",
-    category: "Google",
+    name: "Email — Security alert",
+    category: "Cloud Account",
     subject: "Security alert: new device signed in",
-    text: "Hi {{.FirstName}}, a new device signed in to your Google account. Check: {{.URL}}",
+    text: "Hi {{.FirstName}}, a new device signed in to your email account. Check: {{.URL}}",
     html: wrap(`
-      <p style="font-size:20px;font-weight:500">Google</p>
+      <p style="font-size:20px;font-weight:500">Account Security</p>
       <hr style="border:none;border-top:1px solid #eee">
       <p style="font-size:17px;font-weight:500">A new device signed in to your account</p>
-      <p>Hi {{.FirstName}}, your Google Account was just signed in to from a new Windows device. You're getting this email to make sure it was you.</p>
+      <p>Hi {{.FirstName}}, your email account was just signed in to from a new Windows device. You're getting this email to make sure it was you.</p>
       <p style="margin:26px 0"><a href="{{.URL}}" style="display:inline-block;border:1px solid #1a73e8;color:#1a73e8;text-decoration:none;padding:10px 24px;border-radius:4px;font-weight:600">Check activity</a></p>`),
   },
   {
@@ -112,29 +116,29 @@ export const GALLERY_TEMPLATES: GalleryTemplate[] = [
       <p>— IT Security</p>`),
   },
   {
-    name: "Microsoft Teams — Message waiting",
-    category: "Microsoft 365",
-    subject: "You have 3 unread messages in Teams",
-    text: "Hi {{.FirstName}}, you have unread Teams messages. View: {{.URL}}",
+    name: "Team Chat — Message waiting",
+    category: "Collaboration",
+    subject: "You have 3 unread messages in Team Chat",
+    text: "Hi {{.FirstName}}, you have unread Team Chat messages. View: {{.URL}}",
     html: wrap(`
-      <div style="background:#4b53bc;color:#fff;padding:16px 20px;font-size:18px;font-weight:600;border-radius:6px 6px 0 0">Microsoft Teams</div>
+      <div style="background:#4b53bc;color:#fff;padding:16px 20px;font-size:18px;font-weight:600;border-radius:6px 6px 0 0">Team Chat</div>
       <div style="border:1px solid #eee;border-top:none;padding:24px 22px;border-radius:0 0 6px 6px">
         <p>Hi {{.FirstName}},</p>
-        <p>You have <strong>3 unread messages</strong> and 1 missed call in Microsoft Teams. Your teammates are waiting for a reply.</p>
+        <p>You have <strong>3 unread messages</strong> and 1 missed call in Team Chat. Your teammates are waiting for a reply.</p>
         <div style="background:#f5f6fb;border-left:3px solid #4b53bc;padding:12px 14px;margin:16px 0;font-size:14px;color:#444">
           <strong>Priya (Manager):</strong> "Can you review this before the standup?"
         </div>
-        <p style="margin:24px 0">${btnC("Reply in Teams", "#4b53bc")}</p>
+        <p style="margin:24px 0">${btnC("Reply in Team Chat", "#4b53bc")}</p>
       </div>`),
   },
   {
-    name: "SharePoint — File shared with you",
-    category: "Microsoft 365",
+    name: "Document Portal — File shared with you",
+    category: "Collaboration",
     subject: "A document has been shared with you",
     text: "Hi {{.FirstName}}, a file was shared with you. Open: {{.URL}}",
     html: wrap(`
       <p>Hi {{.FirstName}},</p>
-      <p>A colleague has shared a document with you on SharePoint.</p>
+      <p>A colleague has shared a document with you on the Document Portal.</p>
       <div style="border:1px solid #e5e5e5;border-radius:8px;padding:16px 18px;margin:18px 0;display:flex;align-items:center;gap:14px">
         <div style="font-size:34px">📄</div>
         <div>
@@ -146,24 +150,24 @@ export const GALLERY_TEMPLATES: GalleryTemplate[] = [
       <p style="color:#666;font-size:13px">This link will work for 7 days.</p>`),
   },
   {
-    name: "OneDrive — Storage almost full",
-    category: "Microsoft 365",
-    subject: "Your OneDrive is 98% full — files may stop syncing",
-    text: "Hi {{.FirstName}}, your OneDrive is almost full. Free up space: {{.URL}}",
+    name: "Cloud Drive — Storage almost full",
+    category: "Collaboration",
+    subject: "Your Cloud Drive is 98% full — files may stop syncing",
+    text: "Hi {{.FirstName}}, your Cloud Drive is almost full. Free up space: {{.URL}}",
     html: wrap(`
       <p>Hi {{.FirstName}},</p>
-      <p>Your OneDrive is <strong>98% full</strong>. Once you reach your limit, new files won't sync and you may not be able to receive shared files.</p>
+      <p>Your Cloud Drive is <strong>98% full</strong>. Once you reach your limit, new files won't sync and you may not be able to receive shared files.</p>
       <div style="background:#eee;border-radius:10px;height:12px;margin:16px 0;overflow:hidden"><div style="width:98%;height:100%;background:#d13438"></div></div>
       <p style="margin:24px 0">${btn("Manage storage")}</p>
-      <p>— Microsoft OneDrive</p>`),
+      <p>— Cloud Drive</p>`),
   },
   {
-    name: "DocuSign — Awaiting your signature",
+    name: "e-Sign — Awaiting your signature",
     category: "e-Signature",
-    subject: "Please DocuSign: Employment Agreement Amendment",
+    subject: "Please sign: Employment Agreement Amendment",
     text: "Hi {{.FirstName}}, a document is awaiting your signature. Review: {{.URL}}",
     html: wrap(`
-      <div style="background:#ffce00;padding:14px 20px;font-weight:700;color:#000;border-radius:6px 6px 0 0">DocuSign</div>
+      <div style="background:#ffce00;padding:14px 20px;font-weight:700;color:#000;border-radius:6px 6px 0 0">e-Sign</div>
       <div style="border:1px solid #eee;border-top:none;padding:24px 22px">
         <p>Hi {{.FirstName}},</p>
         <p><strong>Human Resources</strong> has sent you a document to review and sign:</p>
@@ -223,25 +227,25 @@ export const GALLERY_TEMPLATES: GalleryTemplate[] = [
       <p>— IT Infrastructure</p>`),
   },
   {
-    name: "LinkedIn — New messages & requests",
+    name: "Professional Network — New messages & requests",
     category: "Social",
     subject: "You have 5 new notifications",
-    text: "Hi {{.FirstName}}, you have new LinkedIn notifications: {{.URL}}",
+    text: "Hi {{.FirstName}}, you have new network notifications: {{.URL}}",
     html: wrap(`
-      <div style="background:#0a66c2;color:#fff;padding:14px 20px;font-size:18px;font-weight:700;border-radius:6px 6px 0 0">in</div>
+      <div style="background:#0a66c2;color:#fff;padding:14px 20px;font-size:18px;font-weight:700;border-radius:6px 6px 0 0">Network</div>
       <div style="border:1px solid #eee;border-top:none;padding:22px">
         <p>Hi {{.FirstName}},</p>
         <p>You have <strong>2 new connection requests</strong> and <strong>3 unread messages</strong>, including one from a recruiter.</p>
-        <p style="margin:22px 0">${btnC("View on LinkedIn", "#0a66c2")}</p>
+        <p style="margin:22px 0">${btnC("View notifications", "#0a66c2")}</p>
       </div>`),
   },
   {
-    name: "Zoom — Missed meeting recording",
+    name: "Video Meetings — Missed meeting recording",
     category: "Social",
     subject: "Your meeting recording is ready to view",
-    text: "Hi {{.FirstName}}, your Zoom recording is ready: {{.URL}}",
+    text: "Hi {{.FirstName}}, your meeting recording is ready: {{.URL}}",
     html: wrap(`
-      <div style="background:#2d8cff;color:#fff;padding:14px 20px;font-size:18px;font-weight:600;border-radius:6px 6px 0 0">Zoom</div>
+      <div style="background:#2d8cff;color:#fff;padding:14px 20px;font-size:18px;font-weight:600;border-radius:6px 6px 0 0">Video Meetings</div>
       <div style="border:1px solid #eee;border-top:none;padding:22px">
         <p>Hi {{.FirstName}},</p>
         <p>The recording of <strong>"All-Hands Q3 Review"</strong> is now available. You were marked as absent — please review the recording.</p>
@@ -311,7 +315,7 @@ const clickfixPage = `<!doctype html><html><head><meta charset="utf-8">
     <button type="submit" name="verify" value="1" style="display:flex;align-items:center;gap:14px;width:300px;margin:0 auto;background:#fff;border:1px solid #d0d0d5;border-radius:8px;padding:16px 18px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
       <span style="width:26px;height:26px;border:2px solid #b8b8bf;border-radius:5px;flex:none"></span>
       <span style="font-size:15px;color:#222">Verify you are human</span>
-      <span style="margin-left:auto;text-align:right;line-height:1.1"><span style="font-size:13px;font-weight:700;color:#f38020">CF</span><br><span style="font-size:9px;color:#999">Privacy · Terms</span></span>
+      <span style="margin-left:auto;text-align:right;line-height:1.1"><span style="font-size:11px;font-weight:700;color:#666">SECURITY&nbsp;CHECK</span><br><span style="font-size:9px;color:#999">Privacy · Terms</span></span>
     </button>
   </form>
   <p style="color:#999;font-size:12px;margin-top:26px">This check is taking a moment to verify your browser…</p>
@@ -320,8 +324,9 @@ const clickfixPage = `<!doctype html><html><head><meta charset="utf-8">
 
 // A "Browser-in-the-Browser" (BitB) page: a fake browser popup window — complete
 // with a title bar and a spoofed address bar — rendered INSIDE the real page, so
-// the URL bar the victim trusts is actually fake. Contains a Microsoft login
-// form (submissions captured; password never stored). Pure HTML/CSS.
+// the URL bar the victim trusts is actually fake. Uses a FICTIONAL corporate SSO
+// brand/domain (no real Microsoft/Outlook) so it isn't taken down for brand
+// impersonation. Submissions captured; password never stored. Pure HTML/CSS.
 const bitbPage = `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to your account</title></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;margin:0;background:linear-gradient(135deg,#e8eef7,#dfe7f2);min-height:100vh">
@@ -331,12 +336,12 @@ const bitbPage = `<!doctype html><html><head><meta charset="utf-8">
     <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block"></span>
     <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block"></span>
     <div style="flex:1;margin-left:10px;background:#fff;border:1px solid #d3d7de;border-radius:14px;padding:5px 12px;font-size:12px;color:#333;display:flex;align-items:center;gap:6px">
-      <span style="color:#2ba640">🔒</span><span>https://login.microsoftonline.com/common/oauth2/authorize</span>
+      <span style="color:#2ba640">🔒</span><span>https://login.corp-portal.example/sso/authorize</span>
     </div>
   </div>
   <div style="background:#fff;padding:44px 40px">
-    <div style="font-size:21px;font-weight:600;color:#0067b8;margin:0 0 4px">Microsoft</div>
-    <p style="font-size:15px;margin:18px 0 20px">Sign in to continue to Outlook</p>
+    <div style="font-size:21px;font-weight:600;color:#0067b8;margin:0 0 4px">Company Portal</div>
+    <p style="font-size:15px;margin:18px 0 20px">Sign in to continue to Webmail</p>
     <form method="post">
       <input name="username" type="email" placeholder="Email, phone, or Skype" style="width:100%;padding:10px 4px;margin:0 0 18px;border:none;border-bottom:1px solid #666;box-sizing:border-box;font-size:15px">
       <input name="password" type="password" placeholder="Password" style="width:100%;padding:10px 4px;margin:0 0 24px;border:none;border-bottom:1px solid #666;box-sizing:border-box;font-size:15px">
@@ -353,7 +358,7 @@ const input = (label: string, name: string, type = "text") =>
 const submitBtn = (label: string, color: string) =>
   `<button type="submit" style="width:100%;background:${color};color:#fff;border:none;padding:12px;border-radius:4px;font-weight:600;cursor:pointer">${label}</button>`;
 
-// A file-share page (SharePoint/OneDrive-style) that requires sign-in to view.
+// A file-share page (document-portal style) that requires sign-in to view.
 const fileDownloadPage = pageWrap(
   "Shared document",
   `<div style="text-align:center;margin-bottom:20px">
@@ -410,10 +415,10 @@ const deliveryPage = pageWrap(
    </form>`,
 );
 
-// A DocuSign-style review-and-sign page.
+// An e-signature-style review-and-sign page (generic brand).
 const docusignPage = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review &amp; sign</title></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f3f3f3;margin:0">
-  <div style="background:#ffce00;padding:12px 20px;font-weight:700;color:#000">DocuSign</div>
+  <div style="background:#ffce00;padding:12px 20px;font-weight:700;color:#000">e-Sign</div>
   <div style="max-width:420px;margin:6vh auto;background:#fff;padding:34px;border-radius:8px;box-shadow:0 2px 14px rgba(0,0,0,0.08)">
     <div style="font-size:34px;text-align:center">📑</div>
     <h1 style="font-size:18px;text-align:center;margin:8px 0 4px">Employment Agreement Amendment</h1>
@@ -428,15 +433,15 @@ const docusignPage = `<!doctype html><html><head><meta charset="utf-8"><meta nam
 
 export const GALLERY_PAGES: GalleryPage[] = [
   { name: "ClickFix — Verify you are human", category: "QR / Modern", html: clickfixPage },
-  { name: "Browser-in-the-Browser (MS login)", category: "QR / Modern", html: bitbPage },
+  { name: "Browser-in-the-Browser (corporate login)", category: "QR / Modern", html: bitbPage },
   { name: "Verification code (MFA capture)", category: "QR / Modern", html: mfaCodePage },
-  { name: "Microsoft 365 login", category: "Microsoft 365", html: loginForm("Sign in to Microsoft 365", "#0067b8") },
-  { name: "Outlook Web App login", category: "Microsoft 365", html: loginForm("Outlook Web App", "#0067b8") },
-  { name: "SharePoint file download", category: "Microsoft 365", html: fileDownloadPage },
-  { name: "Google login", category: "Google", html: loginForm("Sign in with Google", "#1a73e8") },
-  { name: "LinkedIn login", category: "Social", html: loginForm("Sign in to LinkedIn", "#0a66c2") },
-  { name: "Zoom login", category: "Social", html: loginForm("Sign in to Zoom", "#2d8cff") },
-  { name: "DocuSign — review & sign", category: "e-Signature", html: docusignPage },
+  { name: "Corporate Webmail login", category: "Cloud Account", html: loginForm("Sign in to your workspace", "#0067b8") },
+  { name: "Webmail login", category: "Cloud Account", html: loginForm("Webmail", "#0067b8") },
+  { name: "Document Portal file download", category: "Collaboration", html: fileDownloadPage },
+  { name: "Email account login", category: "Cloud Account", html: loginForm("Sign in to your email", "#1a73e8") },
+  { name: "Professional Network login", category: "Social", html: loginForm("Sign in to Network", "#0a66c2") },
+  { name: "Video Meeting login", category: "Social", html: loginForm("Sign in to Video Meetings", "#2d8cff") },
+  { name: "e-Sign — review & sign", category: "e-Signature", html: docusignPage },
   { name: "Company SSO portal", category: "Generic", html: loginForm("Company Single Sign-On", "#2d3748") },
   { name: "VPN portal login", category: "IT Helpdesk", html: loginForm("Secure VPN Portal", "#107c41") },
   { name: "Webmail login", category: "IT Helpdesk", html: loginForm("Webmail", "#374151") },

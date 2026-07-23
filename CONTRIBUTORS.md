@@ -10,6 +10,7 @@ on an open, defensible security-awareness platform. 💙
 ## Contributors
 
 - [@suhelkathi](https://github.com/suhelkathi)
+- [@tanmay-suba](https://github.com/tanmay-suba) — Tanmay Suba
 
 ---
 
